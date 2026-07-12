@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SynapseTwin — Knowledge Graph</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="topbar-brand" href="/"
+          ><div class="brand-icon">🧠</div>
+          SynapseTwin</a
+        >
+        <div class="topbar-right">
+          <div class="twin-score-badge" id="score-badge">Twin Score: —</div>
+          <button class="btn btn-ghost btn-sm" onclick="logout()">
+            Sign Out
+          </button>
+        </div>
+      </header>
+
+      <nav class="sidebar">
+        <div class="nav-section">
+          <div class="nav-label">Core</div>
+          <a class="nav-item" href="/"
+            ><span class="nav-icon">🏠</span>Dashboard</a
+          >
+          <a class="nav-item" href="/voice.html"
+            ><span class="nav-icon">🎙️</span>Voice Check-in</a
+          >
+          <a class="nav-item" href="/insights.html"
+            ><span class="nav-icon">💡</span>Insights</a
+          >
+          <a class="nav-item active" href="/graph.html"
+            ><span class="nav-icon">🕸️</span>Knowledge Graph</a
+          >
+          <a class="nav-item" href="/learning.html"
+            ><span class="nav-icon">📚</span>Learning</a
+          >
+          <a class="nav-item" href="/environment.html"
+            ><span class="nav-icon">🌍</span>Environment</a
+          >
+        </div>
+        <div class="nav-section">
+          <div class="nav-label">Personal</div>
+          <a class="nav-item" href="/profile.html"
+            ><span class="nav-icon">👤</span>Profile & Goals</a
+          >
+          <a class="nav-item" href="/enterprise.html"
+            ><span class="nav-icon">🏢</span>Enterprise</a
+          >
+          <a class="nav-item" href="/integrations.html"
+            ><span class="nav-icon">🔗</span>Integrations</a
+          >
+        </div>
+      </nav>
+
+      <main class="main-content">
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+          "
+        >
+          <h2 class="section-title" style="margin: 0">🕸️ Knowledge Graph</h2>
+          <button class="btn btn-outline btn-sm" onclick="loadGraph()">
+            ↻ Refresh
+          </button>
+        </div>
+
+        <!-- Legend -->
+        <div
+          style="
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+          "
+          id="legend"
+        >
+          <!-- populated by JS -->
+        </div>
+
+        <!-- Canvas -->
+        <div
+          class="card"
+          style="padding: 0; overflow: hidden; margin-bottom: 1.5rem"
+        >
+          <canvas
+            id="graph-canvas"
+            style="width: 100%; height: 1040px; display: block"
+          ></canvas>
+          <div
+            id="graph-loading"
+            class="loading-overlay"
+            style="
+              position: absolute;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              background: rgba(5, 5, 16, 0.85);
+            "
+          >
+            <div class="spinner"></div>
+            <span>Loading your knowledge graph from Neo4j…</span>
+          </div>
+        </div>
+
+        <!-- Node list -->
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Nodes</span
+              ><span class="badge badge-purple" id="node-count">0</span>
+            </div>
+            <div
+              id="node-list"
+              style="max-height: 300px; overflow-y: auto"
+            ></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Relationships</span
+              ><span class="badge badge-cyan" id="link-count">0</span>
+            </div>
+            <div
+              id="link-list"
+              style="max-height: 300px; overflow-y: auto"
+            ></div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script src="/static/js/api.js"></script>
+    <script>
+      if (!Session.requireAuth()) throw new Error("redirect");
+      function logout() {
+        Session.clear();
+        window.location.href = "/onboarding.html";
+      }
+
+      const NODE_COLORS = {
+        User: "#a78bfa",
+        Mood: "#10b981",
+        Sleep: "#22d3ee",
+        Exercise: "#f59e0b",
+        Habit: "#ec4899",
+        Skill: "#6366f1",
+        Goal: "#f97316",
+        FocusSession: "#0ea5e9",
+        BurnoutRisk: "#ef4444",
+        Person: "#8b5cf6",
+        default: "#64748b",
+      };
+
+      function nodeColor(type) {
+        return NODE_COLORS[type] || NODE_COLORS.default;
+      }
+
+      let graphData = { nodes: [], links: [] };
+
+      async function loadGraph() {
+        const overlay = el("graph-loading");
+        overlay.style.display = "flex";
+        try {
+          graphData = await API.graphData();
+          renderCanvas(graphData);
+          renderLists(graphData);
+          renderLegend(graphData.nodes);
+        } catch (err) {
+          Toast.error("Graph load failed", err.message);
+        } finally {
+          overlay.style.display = "none";
+        }
+      }
+
+      function renderLegend(nodes) {
+        const types = [...new Set(nodes.map((n) => n.type))];
+        el("legend").innerHTML = types
+          .map(
+            (t) => `
+    <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.8rem;color:var(--text-secondary)">
+      <div style="width:12px;height:12px;border-radius:50%;background:${nodeColor(t)}"></div>${t}
+    </div>`,
+          )
+          .join("");
+      }
+
+      // ── Node sizing: semantic nodes larger, daily logs smaller ───────────────────
+      const SEMANTIC_TYPES = new Set([
+        "Goal",
+        "Skill",
+        "Habit",
+        "Person",
+        "Concept",
+        "Environment",
+      ]);
+      const DAILY_TYPES = new Set([
+        "Mood",
+        "Sleep",
+        "Exercise",
+        "FocusSession",
+        "BurnoutRisk",
+      ]);
+      function nodeRadius(type) {
+        if (type === "User") return 22;
+        if (SEMANTIC_TYPES.has(type)) return 14;
+        return 9;
+      }
+
+      // ── Force-directed layout (Fruchterman-Reingold) ──────────────────────────────
+      function forceLayout(nodes, links, W, H) {
+        const ITER = 250,
+          PAD = 28;
+        const k = Math.sqrt((W * H) / Math.max(nodes.length, 1)) * 0.85;
+        const pos = {};
+
+        // Seed: semantic nodes closer to center, daily logs on periphery
+        nodes.forEach((n, i) => {
+          const isSemantic = SEMANTIC_TYPES.has(n.type) || n.type === "User";
+          const seed = isSemantic
+            ? Math.random() * 0.35 + 0.05
+            : Math.random() * 0.35 + 0.4;
+          const angle = (i / nodes.length) * 2 * Math.PI + Math.random() * 0.5;
+          const r = Math.min(W, H) * seed;
+          pos[n.id] = {
+            x: W / 2 + r * Math.cos(angle),
+            y: H / 2 + r * Math.sin(angle),
+            fx: 0,
+            fy: 0,
+          };
+        });
+        // Pin User to center
+        const userNode = nodes.find((n) => n.type === "User");
+        if (userNode)
+          pos[userNode.id] = { x: W / 2, y: H / 2, fx: 0, fy: 0, pinned: true };
+
+        // Build adjacency for link lookup
+        const adj = new Map(nodes.map((n) => [n.id, []]));
+        links.forEach((l) => {
+          if (adj.has(l.source)) adj.get(l.source).push(l.target);
+          if (adj.has(l.target)) adj.get(l.target).push(l.source);
+        });
+
+        for (let iter = 0; iter < ITER; iter++) {
+          const temp = Math.max(2, 18 * (1 - iter / ITER));
+
+          // Reset force accumulators
+          nodes.forEach((n) => {
+            pos[n.id].fx = 0;
+            pos[n.id].fy = 0;
+          });
+
+          // Repulsion between every pair
+          for (let i = 0; i < nodes.length; i++) {
+            for (let j = i + 1; j < nodes.length; j++) {
+              const a = pos[nodes[i].id],
+                b = pos[nodes[j].id];
+              const dx = a.x - b.x,
+                dy = a.y - b.y;
+              const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 0.01);
+              const f = (k * k) / dist;
+              a.fx += (dx / dist) * f;
+              a.fy += (dy / dist) * f;
+              b.fx -= (dx / dist) * f;
+              b.fy -= (dy / dist) * f;
+            }
+          }
+
+          // Attraction along edges
+          links.forEach((l) => {
+            const a = pos[l.source],
+              b = pos[l.target];
+            if (!a || !b) return;
+            const dx = b.x - a.x,
+              dy = b.y - a.y;
+            const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 0.01);
+            const f = (dist * dist) / k;
+            a.fx += (dx / dist) * f * 0.4;
+            a.fy += (dy / dist) * f * 0.4;
+            b.fx -= (dx / dist) * f * 0.4;
+            b.fy -= (dy / dist) * f * 0.4;
+          });
+
+          // Gentle gravity toward center
+          nodes.forEach((n) => {
+            const p = pos[n.id];
+            p.fx += (W / 2 - p.x) * 0.01;
+            p.fy += (H / 2 - p.y) * 0.01;
+          });
+
+          // Apply displacement with temperature cap
+          nodes.forEach((n) => {
+            const p = pos[n.id];
+            if (p.pinned) return;
+            const len = Math.sqrt(p.fx * p.fx + p.fy * p.fy);
+            if (len > 0) {
+              p.x += (p.fx / len) * Math.min(len, temp);
+              p.y += (p.fy / len) * Math.min(len, temp);
+            }
+            p.x = Math.max(PAD, Math.min(W - PAD, p.x));
+            p.y = Math.max(PAD, Math.min(H - PAD, p.y));
+          });
+        }
+        return pos;
+      }
+
+      function renderCanvas(data) {
+        const canvas = el("graph-canvas");
+        const ctx = canvas.getContext("2d");
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        const W = rect.width,
+          H = rect.height;
+
+        if (!data.nodes.length) {
+          ctx.fillStyle = "#64748b";
+          ctx.font = "16px Inter, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(
+            "No nodes yet — log an entry to build your graph!",
+            W / 2,
+            H / 2,
+          );
+          return;
+        }
+
+        // Run force simulation
+        const positions = forceLayout(data.nodes, data.links, W, H);
+
+        // ── Draw links ──────────────────────────────────────────────────────────────
+        data.links.forEach((link) => {
+          const s = positions[link.source],
+            t = positions[link.target];
+          if (!s || !t) return;
+          // Cross-node links (non-User source) get a different colour
+          const isCross =
+            link.source !== data.nodes.find((n) => n.type === "User")?.id;
+          ctx.lineWidth = isCross ? 1.5 : 0.8;
+          ctx.strokeStyle = isCross
+            ? "rgba(99,102,241,0.55)"
+            : "rgba(124,58,237,0.18)";
+          ctx.beginPath();
+          ctx.moveTo(s.x, s.y);
+          ctx.lineTo(t.x, t.y);
+          ctx.stroke();
+        });
+
+        // ── Draw nodes ──────────────────────────────────────────────────────────────
+        data.nodes.forEach((n) => {
+          const p = positions[n.id];
+          if (!p) return;
+          const r = nodeRadius(n.type);
+          const col = nodeColor(n.type);
+
+          // Glow (larger for semantic nodes)
+          const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 2.5);
+          glow.addColorStop(0, col + "35");
+          glow.addColorStop(1, "transparent");
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, r * 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = glow;
+          ctx.fill();
+
+          // Filled circle
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+          ctx.fillStyle = col;
+          ctx.shadowColor = col;
+          ctx.shadowBlur =
+            n.type === "User" ? 18 : SEMANTIC_TYPES.has(n.type) ? 10 : 4;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+
+          // Label — show full label for semantic nodes, type only for daily logs
+          const showFull = n.type === "User" || SEMANTIC_TYPES.has(n.type);
+          const rawLabel = showFull ? n.label || n.type : n.type;
+          const label =
+            rawLabel.length > 14 ? rawLabel.slice(0, 13) + "…" : rawLabel;
+          ctx.fillStyle = "#1e1b4b";
+          ctx.font =
+            n.type === "User"
+              ? "bold 11px Inter,sans-serif"
+              : SEMANTIC_TYPES.has(n.type)
+                ? "600 9px Inter,sans-serif"
+                : "8px Inter,sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(label, p.x, p.y + r + 11);
+        });
+      }
+
+      function renderLists(data) {
+        el("node-count").textContent = data.nodes.length;
+        el("link-count").textContent = data.links.length;
+
+        el("node-list").innerHTML =
+          data.nodes
+            .map(
+              (n) => `
+    <div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0;border-bottom:1px solid var(--border)">
+      <div style="width:8px;height:8px;border-radius:50%;background:${nodeColor(n.type)};flex-shrink:0"></div>
+      <span style="font-size:0.8rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${n.label || n.id}</span>
+      <span class="badge badge-purple" style="font-size:0.65rem">${n.type}</span>
+    </div>`,
+            )
+            .join("") ||
+          '<div class="empty-state" style="padding:1.5rem"><div class="empty-state-text">No nodes</div></div>';
+
+        el("link-list").innerHTML =
+          data.links
+            .map(
+              (l) => `
+    <div style="font-size:0.8rem;padding:0.4rem 0;border-bottom:1px solid var(--border);color:var(--text-secondary)">
+      <span style="color:var(--text-primary)">${l.source}</span>
+      <span style="color:var(--accent-purple)"> —[${l.type}]→ </span>
+      <span style="color:var(--text-primary)">${l.target}</span>
+    </div>`,
+            )
+            .join("") ||
+          '<div class="empty-state" style="padding:1.5rem"><div class="empty-state-text">No relationships</div></div>';
+      }
+
+      // Ensure the card containing the canvas has position:relative for the overlay to work
+      const _canvasCard = document
+        .querySelector(".card canvas")
+        ?.closest(".card");
+      if (_canvasCard) _canvasCard.style.position = "relative";
+
+      window.addEventListener("resize", () => {
+        if (graphData.nodes.length) renderCanvas(graphData);
+      });
+
+      loadGraph();
+    </script>
+    <script src="/static/js/particles.js"></script>
+  </body>
+</html>

@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SynapseTwin — Environment</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css"/>
+  <style>
+    .weather-hero {
+      background: linear-gradient(135deg, rgba(2,132,199,0.09) 0%, rgba(124,58,237,0.07) 100%);
+      border: 1px solid rgba(2,132,199,0.20);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+    }
+    .weather-temp { font-size: 3rem; font-weight: 800; color: var(--accent-cyan); line-height: 1; }
+    .weather-desc { font-size: 0.95rem; color: var(--text-secondary); text-transform: capitalize; margin-top: 0.25rem; }
+    .weather-meta-grid {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 0.5rem; margin-top: 1rem;
+    }
+    .weather-meta-item {
+      text-align: center; background: rgba(255,255,255,0.6); border-radius: 8px; padding: 0.6rem;
+      border: 1px solid var(--border);
+    }
+    .weather-meta-val { font-size: 1rem; font-weight: 700; color: var(--text-primary); }
+    .weather-meta-lbl { font-size: 0.65rem; color: var(--text-muted); margin-top: 0.15rem; }
+    .prod-bar { height: 8px; border-radius: 4px; background: var(--bg-secondary); overflow: hidden; margin-top: 0.5rem; }
+    .prod-fill { height: 100%; border-radius: 4px; transition: width 1s ease; }
+    .impact-badge {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      padding: 0.3rem 0.75rem; border-radius: 20px; font-size: 0.78rem; font-weight: 600;
+    }
+    .impact-high   { background: rgba(5,150,105,0.12);  color: #059669; }
+    .impact-medium { background: rgba(217,119,6,0.12);  color: #d97706; }
+    .impact-low    { background: rgba(220,38,38,0.10);  color: #dc2626; }
+    .forecast-row  {
+      display: grid; grid-template-columns: repeat(5,1fr); gap: 0.5rem; margin-top: 0.75rem;
+    }
+    .forecast-day {
+      text-align: center; background: rgba(255,255,255,0.7); border-radius: 8px;
+      padding: 0.6rem 0.25rem; border: 1px solid var(--border);
+    }
+    .forecast-day .day-name  { font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    .forecast-day .day-icon  { font-size: 1.3rem; margin: 0.25rem 0; }
+    .forecast-day .day-temp  { font-size: 0.85rem; font-weight: 700; color: var(--text-primary); }
+    .forecast-day .day-score { font-size: 0.62rem; margin-top: 0.15rem; }
+    .city-search { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .city-search input {
+      flex: 1; background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 0.55rem 0.875rem;
+      color: var(--text-primary); font-size: 0.875rem; font-family: var(--font-sans);
+    }
+    .location-btn {
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      padding: 0.6rem 1rem; border-radius: var(--radius-sm);
+      border: 1px solid rgba(2,132,199,0.25); background: rgba(2,132,199,0.07);
+      color: var(--accent-cyan); cursor: pointer; font-size: 0.85rem; font-weight: 500;
+      transition: all 0.2s; width: 100%; margin-bottom: 0.75rem;
+    }
+    .location-btn:hover { background: rgba(2,132,199,0.14); }
+    .loc-select {
+      width: 100%; background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 0.5rem 0.75rem; color: var(--text-primary);
+      font-size: 0.85rem; font-family: var(--font-sans); margin-bottom: 0.625rem;
+    }
+    .env-stats-row {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 0.75rem; margin-bottom: 1.5rem;
+    }
+    .env-stat-card {
+      text-align: center; background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 1rem;
+    }
+    .env-stat-val { font-size: 1.5rem; font-weight: 800; color: var(--accent-cyan); }
+    .env-stat-lbl { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem; }
+    .loading-pulse { animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    @media (max-width: 640px) {
+      .forecast-row { grid-template-columns: repeat(3,1fr); }
+      .weather-meta-grid { grid-template-columns: repeat(2,1fr); }
+      .env-stats-row { grid-template-columns: repeat(2,1fr); }
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <a class="topbar-brand" href="/"><div class="brand-icon">🧠</div>SynapseTwin</a>
+    <div class="topbar-right">
+      <div class="twin-score-badge" id="score-badge">Twin Score: —</div>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Sign Out</button>
+    </div>
+  </header>
+
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-label">Core</div>
+      <a class="nav-item" href="/"><span class="nav-icon">🏠</span>Dashboard</a>
+      <a class="nav-item" href="/voice.html"><span class="nav-icon">🎙️</span>Voice Check-in</a>
+      <a class="nav-item" href="/insights.html"><span class="nav-icon">💡</span>Insights</a>
+      <a class="nav-item" href="/graph.html"><span class="nav-icon">🕸️</span>Knowledge Graph</a>
+      <a class="nav-item" href="/learning.html"><span class="nav-icon">📚</span>Learning</a>
+      <a class="nav-item active" href="/environment.html"><span class="nav-icon">🌍</span>Environment</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Personal</div>
+      <a class="nav-item" href="/profile.html"><span class="nav-icon">👤</span>Profile &amp; Goals</a>
+      <a class="nav-item" href="/enterprise.html"><span class="nav-icon">🏢</span>Enterprise</a>
+      <a class="nav-item" href="/integrations.html"><span class="nav-icon">🔗</span>Integrations</a>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div style="margin-bottom:1.5rem">
+      <h2 class="section-title" style="margin-bottom:0.25rem">🌍 Environment Intelligence</h2>
+      <p style="color:var(--text-secondary);font-size:0.875rem">
+        Real-time weather from OpenWeather + location tracking to correlate your surroundings with productivity.
+        Your Digital Twin learns how your environment shapes your performance.
+      </p>
+    </div>
+
+    <!-- Env stats row -->
+    <div class="env-stats-row">
+      <div class="env-stat-card">
+        <div class="env-stat-val" id="stat-locations">—</div>
+        <div class="env-stat-lbl">Locations Logged</div>
+      </div>
+      <div class="env-stat-card">
+        <div class="env-stat-val" id="stat-avg-score">—</div>
+        <div class="env-stat-lbl">Avg. Productivity Score</div>
+      </div>
+      <div class="env-stat-card">
+        <div class="env-stat-val" id="stat-best-location">—</div>
+        <div class="env-stat-lbl">Best Location Type</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem">
+
+      <!-- Weather panel -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🌤️ Current Weather</span>
+          <button class="btn btn-ghost btn-sm" id="refresh-weather-btn" onclick="refreshWeather()">↻ Refresh</button>
+        </div>
+        <div class="city-search">
+          <input id="city-input" type="text" placeholder="Search city… (e.g. Mumbai, London)"
+                 onkeydown="if(event.key==='Enter') searchWeather()"/>
+          <button class="btn btn-primary btn-sm" onclick="searchWeather()">Search</button>
+        </div>
+        <button class="location-btn" onclick="getWeatherByGPS()">📍 Use My Current Location</button>
+        <div id="weather-loading" style="text-align:center;padding:1.5rem;color:var(--text-muted)">
+          <div class="loading-pulse">🌤️ Loading weather data…</div>
+        </div>
+        <div id="weather-display" style="display:none"></div>
+      </div>
+
+      <!-- Forecast + Log Location panel -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📅 5-Day Forecast</span>
+        </div>
+        <div id="forecast-display" style="color:var(--text-muted);font-size:0.82rem;min-height:80px">
+          Search a city or use GPS to see the forecast…
+        </div>
+
+        <div style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border)">
+          <div style="font-size:0.78rem;font-weight:600;color:var(--text-secondary);margin-bottom:0.625rem">📍 Log My Location</div>
+          <select id="loc-type" class="loc-select">
+            <option value="home">🏠 Home</option>
+            <option value="office">🏢 Office</option>
+            <option value="commute">🚌 Commute</option>
+            <option value="other">📌 Other</option>
+          </select>
+          <button class="location-btn" onclick="logLocation()">📍 Log Current Location + Environment</button>
+          <div id="location-message" style="font-size:0.8rem;display:none;text-align:center"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Impact Analysis -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <span class="card-title">📊 Environment → Productivity Analysis</span>
+        <button class="btn btn-ghost btn-sm" onclick="loadEnvImpact()">↻ Refresh</button>
+      </div>
+      <div id="env-impact" style="font-size:0.875rem;color:var(--text-secondary);line-height:1.7">
+        <div class="loading-pulse" style="color:var(--text-muted)">Analysing your environment patterns…</div>
+      </div>
+    </div>
+
+    <!-- Location History -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🗓️ Recent Location Log</span>
+        <button class="btn btn-ghost btn-sm" onclick="loadHistory()">↻ Refresh</button>
+      </div>
+      <div id="history-list" style="color:var(--text-muted);font-size:0.85rem">
+        <div class="loading-pulse" style="padding:1rem">Loading history…</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script>
+if (!Session.requireAuth()) throw new Error('redirect');
+const user = Session.user();
+function logout() { Session.clear(); window.location.href = '/onboarding.html'; }
+updateScoreBadge(user?.twinScore || '—');
+
+let _lastWeatherParams = { city: 'Mumbai' };
+
+// ── Weather ───────────────────────────────────────────────────────────────────
+async function searchWeather() {
+  const city = document.getElementById('city-input').value.trim();
+  if (!city) { Toast.warning('Enter city', 'Type a city name to search.'); return; }
+  _lastWeatherParams = { city };
+  await loadWeather({ city });
+  await loadForecast({ city });
+}
+
+function refreshWeather() { loadWeather(_lastWeatherParams); loadForecast(_lastWeatherParams); }
+
+async function getWeatherByGPS() {
+  if (!navigator.geolocation) {
+    Toast.error('Not supported', 'Geolocation is not available in this browser.');
+    return;
+  }
+  showWeatherLoading('📍 Getting your location…');
+  navigator.geolocation.getCurrentPosition(
+    async pos => {
+      const { latitude: lat, longitude: lon } = pos.coords;
+      _lastWeatherParams = { lat, lon };
+      document.getElementById('city-input').value = '';
+      await loadWeather({ lat, lon });
+      await loadForecast({ lat, lon });
+    },
+    () => {
+      document.getElementById('weather-loading').innerHTML =
+        '<span style="color:#dc2626;font-size:0.82rem">⚠️ Location access denied. Search by city name instead.</span>';
+    }
+  );
+}
+
+function showWeatherLoading(msg) {
+  document.getElementById('weather-loading').style.display = 'block';
+  document.getElementById('weather-loading').innerHTML = `<div class="loading-pulse">${msg}</div>`;
+  document.getElementById('weather-display').style.display = 'none';
+}
+
+async function loadWeather(params) {
+  showWeatherLoading('🌤️ Loading weather…');
+  try {
+    const qs = params.city ? `city=${encodeURIComponent(params.city)}`
+                           : `lat=${params.lat}&lon=${params.lon}`;
+    const data = await API.envWeather(qs);
+    renderWeather(data);
+  } catch (e) {
+    document.getElementById('weather-loading').innerHTML =
+      `<span style="color:#dc2626;font-size:0.82rem">⚠️ ${e.message||'Could not load weather.'}</span>`;
+  }
+}
+
+function renderWeather(data) {
+  const impact = data.productivityImpact || {};
+  const impactClass = impact.label === 'High' ? 'impact-high'
+                    : impact.label === 'Low'  ? 'impact-low' : 'impact-medium';
+  const score  = impact.score ?? data.productivityScore ?? 70;
+  const barColor = impact.label === 'High' ? '#059669'
+                 : impact.label === 'Low'  ? '#dc2626' : '#d97706';
+  const icon   = data.icon ? `<img src="${data.icon}" style="width:64px;height:64px;filter:drop-shadow(0 0 8px rgba(2,132,199,0.3))" onerror="this.style.display='none'"/>` : '';
+
+  document.getElementById('weather-display').innerHTML = `
+    <div class="weather-hero">
+      <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
+        ${icon}
+        <div>
+          <div class="weather-temp">${data.temp}°C</div>
+          <div class="weather-desc">${data.description} · ${data.city}${data.country?', '+data.country:''}</div>
+          ${data.mock?'<div style="font-size:0.65rem;color:var(--text-muted);margin-top:0.25rem">⚠️ Sample data — OpenWeather key may need activation</div>':''}
+        </div>
+      </div>
+      <div class="weather-meta-grid">
+        <div class="weather-meta-item">
+          <div class="weather-meta-val">${data.humidity}%</div>
+          <div class="weather-meta-lbl">Humidity</div>
+        </div>
+        <div class="weather-meta-item">
+          <div class="weather-meta-val">${data.windSpeed} m/s</div>
+          <div class="weather-meta-lbl">Wind</div>
+        </div>
+        <div class="weather-meta-item">
+          <div class="weather-meta-val">${data.feelsLike}°C</div>
+          <div class="weather-meta-lbl">Feels Like</div>
+        </div>
+      </div>
+      <div style="margin-top:1rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.3rem">
+          <span style="font-size:0.75rem;color:var(--text-muted)">Productivity Score</span>
+          <span class="impact-badge ${impactClass}">${impact.label||'Medium'} Impact · ${score}/100</span>
+        </div>
+        <div class="prod-bar">
+          <div class="prod-fill" style="width:${score}%;background:${barColor}"></div>
+        </div>
+        ${impact.tip?`<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.4rem">💡 ${impact.tip}</div>`:''}
+      </div>
+      ${impact.bestFor?.length?`
+        <div style="margin-top:0.5rem;font-size:0.75rem;color:var(--text-muted)">
+          <strong style="color:var(--text-secondary)">Best for today:</strong>
+          ${impact.bestFor.map(t=>`<span style="margin-left:0.35rem">• ${t}</span>`).join('')}
+        </div>`:''}
+    </div>`;
+
+  document.getElementById('weather-loading').style.display = 'none';
+  document.getElementById('weather-display').style.display = 'block';
+}
+
+// ── Forecast ──────────────────────────────────────────────────────────────────
+async function loadForecast(params) {
+  try {
+    const qs   = params.city ? `city=${encodeURIComponent(params.city)}`
+                             : `lat=${params.lat}&lon=${params.lon}`;
+    const data = await API.envForecast(qs);
+    renderForecast(data.forecast || []);
+  } catch (e) {
+    document.getElementById('forecast-display').innerHTML =
+      '<span style="color:var(--text-muted);font-size:0.8rem">Forecast unavailable.</span>';
+  }
+}
+
+function renderForecast(forecast) {
+  if (!forecast.length) return;
+  const iconMap = { sunny:'☀️', clear:'☀️', 'partly cloudy':'⛅', cloudy:'☁️',
+                    overcast:'☁️', 'light rain':'🌦️', rain:'🌧️', thunderstorm:'⛈️',
+                    snow:'❄️', fog:'🌫️', mist:'🌫️' };
+  function getIcon(d) {
+    const l = d.toLowerCase();
+    for (const [k,v] of Object.entries(iconMap)) if (l.includes(k)) return v;
+    return '🌤️';
+  }
+  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  document.getElementById('forecast-display').innerHTML = `
+    <div class="forecast-row">
+      ${forecast.map(f => {
+        const d = new Date(f.date+'T12:00:00');
+        const s = f.productivityScore||70;
+        const c = s>=75?'#059669':s>=55?'#d97706':'#dc2626';
+        return `<div class="forecast-day">
+          <div class="day-name">${DAYS[d.getDay()]}</div>
+          <div class="day-icon">${getIcon(f.description)}</div>
+          <div class="day-temp">${Math.round(f.tempMax)}°</div>
+          <div class="day-score" style="color:${c}">${s}%</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="font-size:0.65rem;color:var(--text-muted);margin-top:0.4rem;text-align:right">
+      % = productivity score
+    </div>`;
+}
+
+// ── Log Location ──────────────────────────────────────────────────────────────
+async function logLocation() {
+  const locType = document.getElementById('loc-type').value;
+  const msg     = document.getElementById('location-message');
+  msg.style.display = 'block';
+  msg.style.color   = 'var(--text-muted)';
+  msg.textContent   = '📍 Getting location…';
+
+  if (!navigator.geolocation) {
+    msg.textContent = 'Geolocation not supported in this browser.';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    async pos => {
+      try {
+        const data = await API.envLogLocation(pos.coords.latitude, pos.coords.longitude, null, locType);
+        msg.style.color = '#059669';
+        msg.textContent = data.insight || '✅ Location logged to Knowledge Graph!';
+        _lastWeatherParams = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+        await loadWeather(_lastWeatherParams);
+        await loadForecast(_lastWeatherParams);
+        loadHistory();
+        loadEnvStats();
+      } catch (e) {
+        msg.style.color = '#dc2626';
+        msg.textContent = '⚠️ Could not log location. Try again.';
+      }
+    },
+    () => {
+      msg.style.color = '#dc2626';
+      msg.textContent = '⚠️ Location access denied. Enable location in browser settings.';
+    }
+  );
+}
+
+// ── Impact analysis ───────────────────────────────────────────────────────────
+async function loadEnvImpact() {
+  const el = document.getElementById('env-impact');
+  el.innerHTML = '<div class="loading-pulse" style="color:var(--text-muted)">Analysing…</div>';
+  try {
+    const data = await API.envImpact();
+    el.textContent = data.analysis || 'Log more environment data to unlock insights.';
+  } catch (e) {
+    el.textContent = 'Log your location and weather to unlock environment-productivity analysis.';
+  }
+}
+
+// ── History ───────────────────────────────────────────────────────────────────
+async function loadHistory() {
+  const el = document.getElementById('history-list');
+  try {
+    const data = await API.envHistory(7);
+    const items = data.history || data || [];
+    if (!items.length) {
+      el.innerHTML = '<div class="empty-state" style="padding:1.5rem"><div class="empty-state-text">No locations logged yet — use the log button above to start.</div></div>';
+      return;
+    }
+    el.innerHTML = items.map(h => `
+      <div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:1.1rem">${h.location_type==='home'?'🏠':h.location_type==='office'?'🏢':h.location_type==='commute'?'🚌':'📌'}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:0.85rem;font-weight:600;color:var(--text-primary)">${h.location_name||h.city||'Unknown location'}</div>
+          <div style="font-size:0.72rem;color:var(--text-muted)">${h.location_type||''} · ${h.weather_condition||''} ${h.temperature?h.temperature+'°C':''}</div>
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);flex-shrink:0">${h.date||h.logged_at||''}</div>
+      </div>`).join('');
+  } catch (e) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;padding:1rem">Log a location to see your history here.</div>';
+  }
+}
+
+// ── Env stats ─────────────────────────────────────────────────────────────────
+async function loadEnvStats() {
+  try {
+    const data = await API.envHistory(30);
+    const items = data.history || data || [];
+    document.getElementById('stat-locations').textContent = items.length || '0';
+    if (items.length) {
+      const scores = items.filter(i=>i.productivity_score).map(i=>i.productivity_score);
+      const avg = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : '—';
+      document.getElementById('stat-avg-score').textContent = scores.length ? avg+'%' : '—';
+      const typeCounts = {};
+      items.forEach(i => { typeCounts[i.location_type] = (typeCounts[i.location_type]||0)+1; });
+      const best = Object.entries(typeCounts).sort((a,b)=>b[1]-a[1])[0];
+      document.getElementById('stat-best-location').textContent =
+        best ? (best[0]==='home'?'🏠 Home':best[0]==='office'?'🏢 Office':best[0]==='commute'?'🚌 Commute':'📌 Other') : '—';
+    }
+  } catch (e) {}
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadWeather({ city: 'Mumbai' });
+loadForecast({ city: 'Mumbai' });
+loadEnvImpact();
+loadHistory();
+loadEnvStats();
+</script>
+<script src="/static/js/particles.js"></script>
+</body>
+</html>

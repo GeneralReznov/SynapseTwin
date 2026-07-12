@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SynapseTwin — Integrations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css"/>
+  <style>
+    .integration-section { margin-bottom: 1.5rem; }
+    .course-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      transition: border-color 0.2s, transform 0.2s;
+      cursor: pointer;
+    }
+    .course-card:hover {
+      border-color: var(--accent-purple);
+      transform: translateY(-2px);
+    }
+    .course-platform-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 20px;
+      letter-spacing: 0.05em;
+    }
+    .badge-coursera { background: rgba(0,86,210,0.2); color: #4d9fff; }
+    .badge-udemy    { background: rgba(160,32,240,0.2); color: #a855f7; }
+    .course-rating { color: #f59e0b; font-size: 0.78rem; font-weight: 600; }
+    .course-meta   { font-size: 0.73rem; color: var(--text-muted); margin-top: 0.3rem; }
+    .course-skills { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; }
+    .skill-chip {
+      font-size: 0.65rem;
+      background: rgba(124,58,237,0.15);
+      color: var(--accent-purple);
+      padding: 2px 7px;
+      border-radius: 20px;
+      font-weight: 500;
+    }
+    .weather-display {
+      background: linear-gradient(135deg, rgba(14,165,233,0.1) 0%, rgba(124,58,237,0.08) 100%);
+      border: 1px solid rgba(14,165,233,0.25);
+      border-radius: var(--radius-sm);
+      padding: 1.25rem;
+    }
+    .weather-temp { font-size: 2.5rem; font-weight: 800; color: var(--accent-cyan); line-height: 1; }
+    .weather-desc { font-size: 0.9rem; color: var(--text-secondary); text-transform: capitalize; }
+    .weather-meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 0.75rem; }
+    .weather-meta-item { text-align: center; background: var(--bg-elevated); border-radius: 6px; padding: 0.5rem; }
+    .weather-meta-val  { font-size: 0.95rem; font-weight: 700; color: var(--text-primary); }
+    .weather-meta-lbl  { font-size: 0.65rem; color: var(--text-muted); margin-top: 0.1rem; }
+    .productivity-bar {
+      height: 6px; border-radius: 3px;
+      background: var(--bg-elevated);
+      margin-top: 0.75rem; overflow: hidden;
+    }
+    .productivity-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+    .forecast-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+    .forecast-day {
+      text-align: center;
+      background: var(--bg-elevated);
+      border-radius: 6px;
+      padding: 0.5rem 0.25rem;
+      border: 1px solid var(--border);
+    }
+    .forecast-day .day-name  { font-size: 0.65rem; color: var(--text-muted); font-weight: 600; }
+    .forecast-day .day-temp  { font-size: 0.85rem; font-weight: 700; color: var(--text-primary); margin-top: 0.2rem; }
+    .forecast-day .day-icon  { font-size: 1.2rem; margin: 0.2rem 0; }
+    .forecast-day .day-score { font-size: 0.6rem; color: var(--text-muted); }
+    .impact-badge {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      padding: 0.3rem 0.75rem; border-radius: 20px;
+      font-size: 0.78rem; font-weight: 600;
+    }
+    .impact-high   { background: rgba(16,185,129,0.15); color: #10b981; }
+    .impact-medium { background: rgba(245,158,11,0.15); color: #f59e0b; }
+    .impact-low    { background: rgba(239,68,68,0.15);  color: #ef4444; }
+    .platform-tabs {
+      display: flex; gap: 0.5rem; margin-bottom: 1rem;
+    }
+    .platform-tab {
+      padding: 0.4rem 1rem;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+      transition: all 0.2s;
+    }
+    .platform-tab.active {
+      background: var(--accent-purple);
+      border-color: var(--accent-purple);
+      color: #fff;
+    }
+    .ai-insight-box {
+      background: linear-gradient(135deg, rgba(124,58,237,0.08) 0%, rgba(14,165,233,0.06) 100%);
+      border: 1px solid rgba(124,58,237,0.2);
+      border-radius: var(--radius-sm);
+      padding: 0.875rem 1rem;
+      margin-bottom: 1rem;
+    }
+    .progress-log-form {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      margin-top: 1rem;
+    }
+    .progress-log-form input, .progress-log-form select {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      color: var(--text-primary);
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+    }
+    .location-btn {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.6rem 1rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(14,165,233,0.3);
+      background: rgba(14,165,233,0.08);
+      color: var(--accent-cyan);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s;
+      width: 100%;
+      justify-content: center;
+      margin-bottom: 0.75rem;
+    }
+    .location-btn:hover { background: rgba(14,165,233,0.15); }
+    .city-search {
+      display: flex; gap: 0.5rem; margin-bottom: 0.75rem;
+    }
+    .city-search input {
+      flex: 1;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      color: var(--text-primary);
+      font-size: 0.85rem;
+    }
+    .loading-pulse { animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .course-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.75rem; }
+    .learning-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.5rem; margin-bottom: 1rem; }
+    .stat-card { text-align: center; background: var(--bg-elevated); border-radius: 6px; padding: 0.75rem; border: 1px solid var(--border); }
+    .stat-val  { font-size: 1.4rem; font-weight: 800; color: var(--accent-purple); }
+    .stat-lbl  { font-size: 0.68rem; color: var(--text-muted); margin-top: 0.1rem; }
+    .env-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 640px) {
+      .env-grid-2 { grid-template-columns: 1fr; }
+      .forecast-row { grid-template-columns: repeat(3,1fr); }
+      .weather-meta-grid { grid-template-columns: repeat(2,1fr); }
+      .learning-stats { grid-template-columns: repeat(2,1fr); }
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <a class="topbar-brand" href="/"><div class="brand-icon">🧠</div>SynapseTwin</a>
+    <div class="topbar-right">
+      <div class="twin-score-badge" id="score-badge">Twin Score: —</div>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Sign Out</button>
+    </div>
+  </header>
+
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-label">Core</div>
+      <a class="nav-item" href="/"><span class="nav-icon">🏠</span>Dashboard</a>
+      <a class="nav-item" href="/voice.html"><span class="nav-icon">🎙️</span>Voice Check-in</a>
+      <a class="nav-item" href="/insights.html"><span class="nav-icon">💡</span>Insights</a>
+      <a class="nav-item" href="/graph.html"><span class="nav-icon">🕸️</span>Knowledge Graph</a>
+      <a class="nav-item" href="/learning.html"><span class="nav-icon">📚</span>Learning</a>
+      <a class="nav-item" href="/environment.html"><span class="nav-icon">🌍</span>Environment</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Personal</div>
+      <a class="nav-item" href="/profile.html"><span class="nav-icon">👤</span>Profile &amp; Goals</a>
+      <a class="nav-item" href="/enterprise.html"><span class="nav-icon">🏢</span>Enterprise</a>
+      <a class="nav-item active" href="/integrations.html"><span class="nav-icon">🔗</span>Integrations</a>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div style="margin-bottom:1.5rem">
+      <h2 class="section-title" style="margin-bottom:0.25rem">🔗 Integrations</h2>
+      <p style="color:var(--text-secondary);font-size:0.875rem">
+        Your live data connections — every integration adds more relationships to your Knowledge Graph.
+      </p>
+    </div>
+
+    <!-- Active integrations -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <span class="card-title">Active Integrations</span>
+        <span class="badge badge-green" id="active-count-badge">6 connected</span>
+      </div>
+      <div id="active-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:0.75rem"></div>
+    </div>
+
+    <!-- ── LEARNING & ENVIRONMENT gateway cards ── -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+      <div class="card" style="border:1px solid rgba(124,58,237,0.2);cursor:pointer" onclick="window.location='/learning.html'">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem">
+          <span style="font-size:1.8rem">📚</span>
+          <div>
+            <div style="font-weight:700;font-size:0.95rem;color:var(--text-primary)">Learning &amp; Growth</div>
+            <span class="badge badge-green" style="font-size:0.65rem">Live</span>
+          </div>
+        </div>
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.875rem">
+          AI-personalised Coursera &amp; Udemy courses, progress tracking, and skill logging — all synced to your Knowledge Graph.
+        </p>
+        <a href="/learning.html" class="btn btn-primary btn-sm" style="width:100%;justify-content:center">
+          Open Learning →
+        </a>
+      </div>
+      <div class="card" style="border:1px solid rgba(2,132,199,0.2);cursor:pointer" onclick="window.location='/environment.html'">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem">
+          <span style="font-size:1.8rem">🌍</span>
+          <div>
+            <div style="font-weight:700;font-size:0.95rem;color:var(--text-primary)">Environment Intelligence</div>
+            <span class="badge badge-green" style="font-size:0.65rem">Live</span>
+          </div>
+        </div>
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.875rem">
+          Live weather, 5-day forecast, location logging, and AI analysis of how your environment affects productivity.
+        </p>
+        <a href="/environment.html" class="btn btn-outline btn-sm" style="width:100%;justify-content:center">
+          Open Environment →
+        </a>
+      </div>
+    </div>
+
+    <!-- ── HEALTH & WEARABLES (COMING SOON) ── -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <span class="card-title">💪 Health &amp; Wearables</span>
+        <span class="badge badge-orange">Coming Soon</span>
+      </div>
+      <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:1rem">
+        Auto-populate your Health Graph with real biometric data — sleep, heart rate, steps, nutrition.
+      </p>
+      <div id="health-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.75rem"></div>
+    </div>
+
+    <!-- ── PRODUCTIVITY (MOVED DOWN — COMING SOON) ── -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <span class="card-title">🎯 Productivity &amp; Work</span>
+        <span class="badge badge-orange">Coming Soon</span>
+      </div>
+      <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:1rem">
+        Auto-populate your Productivity Graph — tasks, meetings, deadlines, and workload.
+      </p>
+      <div id="work-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.75rem"></div>
+    </div>
+
+    <!-- Vision statement -->
+    <div class="card" style="background:linear-gradient(135deg,var(--bg-card) 0%,rgba(124,58,237,0.08) 100%);border:1px solid rgba(124,58,237,0.2)">
+      <div class="card-header"><span class="card-title">🧠 The Human OS Vision</span></div>
+      <div style="color:var(--text-secondary);font-size:0.9rem;line-height:1.7">
+        <p style="margin-bottom:0.75rem">
+          Every integration adds more data to your <strong style="color:var(--accent-purple)">Knowledge Graph</strong>.
+          But more importantly, it adds more <em>relationships</em> — causal chains that explain
+          <strong>why</strong> your life works the way it does.
+        </p>
+        <div style="background:var(--bg-elevated);border-radius:var(--radius-sm);padding:0.75rem 1rem;margin-bottom:0.75rem;font-family:monospace;font-size:0.82rem;color:var(--accent-cyan);line-height:1.8">
+          Poor Sleep → Reduced Focus → Skipped Workout → Higher Stress → Lower Productivity → Delayed Project → More Stress
+        </div>
+        <p style="color:var(--text-muted);font-size:0.82rem">
+          This is exactly what Neo4j is built for — and exactly what makes SynapseTwin a
+          <strong>Human Operating System</strong>, not just another wellness app.
+        </p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script>
+if (!Session.requireAuth()) throw new Error('redirect');
+const user = Session.user();
+function logout() { Session.clear(); window.location.href = '/onboarding.html'; }
+updateScoreBadge(user?.twinScore || '—');
+
+// ── Integration card renderer ─────────────────────────────────────────────────
+function iCard({ icon, name, desc, status, detail }) {
+  const isActive = status === 'Active';
+  return `
+    <div style="background:var(--bg-elevated);border-radius:var(--radius-sm);padding:0.875rem;
+                border:1px solid ${isActive ? 'rgba(16,185,129,0.25)' : 'var(--border)'};
+                opacity:${isActive ? 1 : 0.75}">
+      <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.4rem">
+        <span style="font-size:1.3rem">${icon}</span>
+        <span style="font-weight:600;font-size:0.85rem">${name}</span>
+        <span class="badge ${isActive ? 'badge-green' : 'badge-orange'}" style="margin-left:auto;font-size:0.65rem">${status}</span>
+      </div>
+      <div style="font-size:0.75rem;color:var(--text-muted)">${desc}</div>
+      ${detail ? `<div style="font-size:0.72rem;color:var(--accent-cyan);margin-top:0.35rem">${detail}</div>` : ''}
+    </div>`;
+}
+
+function renderGrid(id, items) {
+  document.getElementById(id).innerHTML = items.map(iCard).join('');
+}
+
+renderGrid('active-grid', [
+  { icon:'🗣️', name:'Sarvam AI',    status:'Active', desc:'Voice · Language · Emotion · LLM', detail:'STT (saaras:v3) · TTS (bulbul:v3) + gTTS fallback' },
+  { icon:'🕸️', name:'Neo4j AuraDB', status:'Active', desc:'Knowledge Graph · Causal patterns · Timeline', detail:'Human Knowledge Graph — relationships, not just data' },
+  { icon:'📚', name:'Coursera',     status:'Active', desc:'AI-powered role-based course recommendations', detail:'AI-Personalized to your job title & department' },
+  { icon:'⚡', name:'Udemy',        status:'Active', desc:'Role-matched skill development courses', detail:'Real courses · Progress tracked in Knowledge Graph' },
+  { icon:'🌤️', name:'OpenWeather',  status:'Active', desc:'Live weather → productivity correlation', detail:'5-day forecast · Environment-performance analysis' },
+  { icon:'📍', name:'Location',     status:'Active', desc:'Home / Office / Commute pattern tracking', detail:'GPS or manual · Logged to Knowledge Graph' },
+]);
+
+renderGrid('health-grid', [
+  { icon:'🍎', name:'Apple Health', status:'Planned', desc:'Sleep · HRV · Steps · Workout' },
+  { icon:'🏃', name:'Google Fit',   status:'Planned', desc:'Activity · Heart Rate · Weight' },
+  { icon:'⌚', name:'Garmin',       status:'Planned', desc:'Sleep stages · Stress · VO2 max' },
+  { icon:'💙', name:'Fitbit',       status:'Planned', desc:'Sleep · Steps · Active zones' },
+  { icon:'🔵', name:'Whoop',        status:'Planned', desc:'Recovery · Strain · HRV daily' },
+  { icon:'⌚', name:'Apple Watch',  status:'Planned', desc:'Real-time health metrics' },
+]);
+
+renderGrid('work-grid', [
+  { icon:'📅', name:'Google Calendar', status:'Planned', desc:'Meetings · Focus blocks · Deadlines' },
+  { icon:'💬', name:'Slack',           status:'Planned', desc:'Message patterns · Meeting load' },
+  { icon:'🔵', name:'Jira',            status:'Planned', desc:'Sprint tasks · Deadlines · Load' },
+  { icon:'👥', name:'Microsoft Teams', status:'Planned', desc:'Meeting hours · Collaboration score' },
+  { icon:'📋', name:'Notion',          status:'Planned', desc:'Notes · Projects · Goal tracking' },
+  { icon:'🐙', name:'GitHub',          status:'Planned', desc:'Commits · PR load · Code focus time' },
+]);
+
+</script>
+<script src="/static/js/particles.js"></script>
+</body>
+</html>

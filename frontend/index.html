@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SynapseTwin — Human OS Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css"/>
+</head>
+<body>
+<div class="app-shell">
+  <!-- Topbar -->
+  <header class="topbar">
+    <a class="topbar-brand" href="/">
+      <div class="brand-icon">🧠</div>
+      SynapseTwin
+    </a>
+    <div class="topbar-right">
+      <div class="twin-score-badge" id="score-badge">Twin Score: —</div>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Sign Out</button>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-label">Core</div>
+      <a class="nav-item active" href="/"><span class="nav-icon">🏠</span>Dashboard</a>
+      <a class="nav-item" href="/voice.html"><span class="nav-icon">🎙️</span>Voice Check-in</a>
+      <a class="nav-item" href="/insights.html"><span class="nav-icon">💡</span>Insights</a>
+      <a class="nav-item" href="/graph.html"><span class="nav-icon">🕸️</span>Knowledge Graph</a>
+      <a class="nav-item" href="/learning.html"><span class="nav-icon">📚</span>Learning</a>
+      <a class="nav-item" href="/environment.html"><span class="nav-icon">🌍</span>Environment</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Personal</div>
+      <a class="nav-item" href="/profile.html"><span class="nav-icon">👤</span>Profile & Goals</a>
+      <a class="nav-item" href="/enterprise.html"><span class="nav-icon">🏢</span>Enterprise</a>
+      <a class="nav-item" href="/integrations.html"><span class="nav-icon">🔗</span>Integrations</a>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="main-content">
+    <div style="margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <h1 style="font-size:1.6rem">Welcome back, <span id="user-name" class="gradient-text">—</span></h1>
+        <p id="date-str" style="font-size:0.85rem;color:var(--text-muted);margin-top:0.2rem"></p>
+        <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.1rem;font-style:italic">Your AI Digital Twin — understanding your life as an interconnected system</p>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="window.location.href='/voice.html'">+ Log Today</button>
+    </div>
+
+    <!-- Stats row: Energy · Mood · Focus · Health · Goals · Twin Score -->
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:0.75rem;margin-bottom:1.5rem">
+      <div class="stat-card">
+        <div class="stat-icon">⚡</div>
+        <div class="stat-value" id="stat-energy" style="font-size:1.1rem">—</div>
+        <div class="stat-label">Energy</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">😊</div>
+        <div class="stat-value" id="stat-mood" style="font-size:1.1rem">—</div>
+        <div class="stat-label">Avg Mood</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🎯</div>
+        <div class="stat-value" id="stat-focus" style="font-size:1.1rem">—</div>
+        <div class="stat-label">Focus</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">💪</div>
+        <div class="stat-value" id="stat-physical" style="font-size:1.1rem">—</div>
+        <div class="stat-label">Health</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🏆</div>
+        <div class="stat-value" id="stat-goals" style="font-size:1.1rem">—</div>
+        <div class="stat-label">Goals</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🔥</div>
+        <div class="stat-value" id="stat-burnout" style="font-size:1.1rem;color:var(--warning)">—</div>
+        <div class="stat-label">Burnout Risk</div>
+      </div>
+    </div>
+
+    <!-- Twin Score gauge + Dimension Breakdown -->
+    <div class="grid-2 mb-4">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Twin Score</span><span class="badge badge-purple">0–100</span></div>
+        <div class="gauge-wrap">
+          <svg id="gauge-svg" class="gauge-svg" width="180" height="180" viewBox="0 0 180 180"></svg>
+          <div class="gauge-score" id="gauge-num">—</div>
+          <div class="gauge-label">Overall Alignment</div>
+        </div>
+        <div id="twin-summary" style="font-size:0.85rem;color:var(--text-secondary);text-align:center;margin-top:0.75rem;padding:0 0.75rem;line-height:1.5"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Dimension Breakdown</span>
+          <span class="badge badge-cyan">Physical · Mental · Learning · Productivity · Social</span>
+        </div>
+        <div id="dimensions-wrap" style="padding-top:0.5rem">
+          <div class="loading-overlay" style="padding:2rem"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mood chart + Alerts -->
+    <div class="grid-2 mb-4">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">7-Day Mood Trend</span>
+          <span class="badge badge-purple" id="trend-badge">—</span>
+        </div>
+        <div id="mood-chart" class="chart-wrap"></div>
+        <div id="chart-dates" style="display:flex;gap:4px;padding-top:0.25rem;font-size:0.65rem;color:var(--text-muted)"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Smart Alerts</span></div>
+        <div id="alerts-wrap">
+          <div class="loading-overlay" style="padding:2rem"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Predictions strip -->
+    <div class="card mb-4" id="predictions-card" style="display:none">
+      <div class="card-header">
+        <span class="card-title">🔮 Prediction Engine</span>
+        <span class="badge badge-orange" id="pred-count">0 predictions</span>
+      </div>
+      <div id="predictions-wrap" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0.75rem;padding-top:0.5rem"></div>
+    </div>
+
+    <!-- History table -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Recent Entries</span>
+        <button class="btn btn-ghost btn-sm" onclick="loadHistory()">↻ Refresh</button>
+      </div>
+      <div id="history-wrap">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script>
+if (!Session.requireAuth()) throw new Error('redirect');
+
+const user = Session.user();
+el('user-name').textContent = user?.name?.split(' ')[0] || 'there';
+el('date-str').textContent  = new Date().toLocaleDateString('en-IN', {
+  weekday:'long', year:'numeric', month:'long', day:'numeric'
+});
+
+function logout() { Session.clear(); window.location.href = '/onboarding.html'; }
+
+async function loadDashboard() {
+  try {
+    const [insightsData, alertsData] = await Promise.all([
+      API.insights().catch(() => null),
+      API.notifications().catch(() => ({ alerts: [] })),
+    ]);
+
+    if (insightsData) {
+      const ts = user?.twinScore || 50;
+      const bd = insightsData.twinBreakdown || {};
+
+      // Stats row
+      el('stat-energy').textContent   = bd.physical  ? bd.physical+'%'   : '—';
+      el('stat-mood').textContent     = insightsData.moodAverage  ? insightsData.moodAverage.toFixed(1)+'/10' : '—';
+      el('stat-focus').textContent    = insightsData.focusAverage ? insightsData.focusAverage.toFixed(1)+'h'  : '—';
+      el('stat-physical').textContent = bd.physical  ? bd.physical+'/100' : '—';
+      el('stat-burnout').textContent  = insightsData.burnoutScore != null ? insightsData.burnoutScore+'/100'  : '—';
+
+      // Goals count
+      const goalsCount = (insightsData.goals || []).length;
+      el('stat-goals').textContent = goalsCount ? goalsCount+' active' : '—';
+
+      // Gauge
+      updateScoreBadge(ts);
+      renderGauge('gauge-svg', ts);
+      el('gauge-num').textContent = ts;
+
+      // AI Summary — rich narrative
+      const summary = insightsData.causalInsight || insightsData.aiReasoning || '';
+      el('twin-summary').innerHTML = summary
+        ? `<em>"${summary}"</em>`
+        : '<span style="color:var(--text-muted)">Log 3+ days to unlock AI narrative insights.</span>';
+
+      // Trend badge
+      const trend = insightsData.burnoutTrend || 'stable';
+      const trendEl = el('trend-badge');
+      trendEl.textContent = trend;
+      trendEl.className = `badge ${trend==='improving'?'badge-green':trend==='worsening'?'badge-red':'badge-cyan'}`;
+
+      // Mood chart
+      renderMoodChart(insightsData.weeklyData || []);
+
+      // Dimensions — use real twinBreakdown from server
+      el('dimensions-wrap').innerHTML = (bd.physical != null)
+        ? renderDimensions(bd)
+        : '<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:2rem">Log entries to compute dimensions</div>';
+
+      // Predictions
+      renderPredictions(insightsData.predictions || []);
+    }
+
+    renderAlerts(alertsData.alerts || []);
+
+  } catch(err) {
+    Toast.error('Dashboard error', err.message);
+  }
+}
+
+function renderMoodChart(data) {
+  const chart = el('mood-chart');
+  const dates = el('chart-dates');
+  if (!data.length) {
+    chart.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📊</div><div class="empty-state-text">Log your first entry to see your mood trend</div></div>';
+    return;
+  }
+  const max = Math.max(...data.map(d => d.moodScore || 1), 10);
+  chart.innerHTML = data.map(d => {
+    const h   = Math.max(8, Math.round((d.moodScore / max) * 190));
+    const col = scoreColor(d.moodScore * 10);
+    return `<div class="chart-bar" style="height:${h}px;background:linear-gradient(180deg,${col},${col}88)"
+              data-val="${d.moodScore}/10" title="${d.date}: ${d.moodScore}/10"></div>`;
+  }).join('');
+  dates.innerHTML = data.map(d =>
+    `<span style="flex:1;text-align:center">${d.date?.slice(5)}</span>`
+  ).join('');
+}
+
+function renderAlerts(alerts) {
+  const wrap = el('alerts-wrap');
+  if (!alerts.length) {
+    wrap.innerHTML = '<div class="empty-state"><div class="empty-state-icon">✅</div><div class="empty-state-text">No alerts — you\'re doing great!</div></div>';
+    return;
+  }
+  const typeMap = { burnout:'alert-critical', warning:'alert-warning', streak:'alert-success', info:'alert-info' };
+  wrap.innerHTML = alerts.slice(0, 5).map(a => `
+    <div class="alert ${typeMap[a.severity] || 'alert-info'}">
+      <div><div class="alert-title">${a.title}</div><div class="alert-message">${a.message}</div></div>
+    </div>
+  `).join('');
+}
+
+function renderPredictions(predictions) {
+  if (!predictions.length) return;
+  el('predictions-card').style.display = '';
+  el('pred-count').textContent = `${predictions.length} prediction${predictions.length>1?'s':''}`;
+
+  const typeConfig = {
+    burnout:              { icon:'🔥', col:'var(--danger)',  label:'Burnout' },
+    productivity_decline: { icon:'📉', col:'var(--warning)', label:'Productivity' },
+    learning_stagnation:  { icon:'📚', col:'var(--accent-cyan)', label:'Learning' },
+    habit_failure:        { icon:'🔄', col:'var(--warning)', label:'Habit' },
+    missed_goal:          { icon:'🎯', col:'var(--accent-purple)', label:'Goal' },
+    stress_spike:         { icon:'⚡', col:'var(--danger)',  label:'Stress' },
+    poor_sleep:           { icon:'😴', col:'var(--accent-cyan)', label:'Sleep' },
+  };
+
+  el('predictions-wrap').innerHTML = predictions.map(p => {
+    const cfg = typeConfig[p.type] || { icon:'🔮', col:'var(--text-secondary)', label:'Risk' };
+    const pct = Math.round((p.probability || 0.5) * 100);
+    return `
+      <div style="background:var(--bg-elevated);border-radius:var(--radius-sm);padding:0.875rem;border-left:3px solid ${cfg.col}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem">
+          <span style="font-size:0.75rem;font-weight:600;color:${cfg.col}">${cfg.icon} ${cfg.label}</span>
+          <span style="font-size:0.7rem;color:var(--text-muted)">${p.confidence || pct+'%'} confidence</span>
+        </div>
+        <div style="font-size:0.82rem;color:var(--text-secondary);line-height:1.4;margin-bottom:0.4rem">${p.message}</div>
+        <div style="font-size:0.7rem;color:var(--text-muted)">⏱ ${p.timeframe}</div>
+      </div>`;
+  }).join('');
+}
+
+async function loadHistory() {
+  const wrap = el('history-wrap');
+  wrap.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  try {
+    const { history } = await API.history(7);
+    if (!history.length) {
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📓</div><div class="empty-state-text">No entries yet. Use Voice Check-in to start!</div></div>';
+      return;
+    }
+    wrap.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+        <thead>
+          <tr style="color:var(--text-muted);font-size:0.75rem;border-bottom:1px solid var(--border)">
+            <th style="padding:0.5rem;text-align:left">Date</th>
+            <th style="padding:0.5rem;text-align:left">Mood</th>
+            <th style="padding:0.5rem;text-align:left">Emotion</th>
+            <th style="padding:0.5rem;text-align:left">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${history.map(h => `
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:0.6rem 0.5rem;color:var(--text-muted)">${h.date}</td>
+              <td style="padding:0.6rem 0.5rem;font-weight:700;color:${scoreColor((h.moodScore||5)*10)}">${h.moodScore||'—'}/10</td>
+              <td style="padding:0.6rem 0.5rem">${h.emotion?`<span class="badge badge-purple">${h.emotion}</span>`:'—'}</td>
+              <td style="padding:0.6rem 0.5rem;color:var(--text-secondary);max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h.notes||'—'}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch(err) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">${err.message}</div></div>`;
+  }
+}
+
+// Init
+renderGauge('gauge-svg', user?.twinScore || 50);
+el('gauge-num').textContent = user?.twinScore || '—';
+updateScoreBadge(user?.twinScore || '—');
+loadDashboard();
+loadHistory();
+</script>
+<script src="/static/js/particles.js"></script>
+</body>
+</html>

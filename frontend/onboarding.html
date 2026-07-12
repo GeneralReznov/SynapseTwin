@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SynapseTwin — Sign In</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/styles.css" />
+  </head>
+  <body>
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <div class="auth-logo">
+          <div class="auth-logo-icon">🧠</div>
+          <h1 style="font-size: 1.5rem">SynapseTwin</h1>
+          <p style="text-align: center; font-size: 0.85rem">
+            Your AI Digital Twin — understanding your life as a connected system
+          </p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs" style="margin-bottom: 1.5rem">
+          <div class="tab active" data-tab="login" onclick="switchTab('login')">
+            Sign In
+          </div>
+          <div class="tab" data-tab="register" onclick="switchTab('register')">
+            Create Account
+          </div>
+        </div>
+
+        <!-- Demo quick-login -->
+        <div
+          id="demo-banner"
+          style="
+            background: linear-gradient(
+              135deg,
+              rgba(99, 102, 241, 0.15),
+              rgba(167, 139, 250, 0.1)
+            );
+            border: 1px solid rgba(99, 102, 241, 0.35);
+            border-radius: 12px;
+            padding: 0.9rem 1rem;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+          "
+        >
+          <div style="font-size: 1.6rem; flex-shrink: 0">👤</div>
+          <div style="flex: 1; min-width: 0">
+            <div
+              style="
+                font-size: 0.8rem;
+                font-weight: 600;
+                color: var(--text-primary);
+              "
+            >
+              Arjun Mehta
+            </div>
+            <div
+              style="
+                font-size: 0.72rem;
+                color: var(--text-muted);
+                margin-top: 1px;
+              "
+            >
+              User 1 Account
+            </div>
+          </div>
+          <button
+            type="button"
+            id="demo-btn"
+            onclick="loginAsDemo()"
+            style="
+              background: linear-gradient(135deg, #6366f1, #8b5cf6);
+              color: #fff;
+              border: none;
+              border-radius: 8px;
+              padding: 0.45rem 0.9rem;
+              font-size: 0.78rem;
+              font-weight: 600;
+              cursor: pointer;
+              white-space: nowrap;
+              display: flex;
+              align-items: center;
+              gap: 0.4rem;
+              transition: opacity 0.15s;
+            "
+            onmouseover="this.style.opacity='0.85'"
+            onmouseout="this.style.opacity='1'"
+          >
+            <span id="demo-btn-text">Sign in</span>
+            <span
+              id="demo-spinner"
+              class="spinner"
+              style="
+                display: none;
+                width: 12px;
+                height: 12px;
+                border-width: 2px;
+              "
+            ></span>
+          </button>
+        </div>
+
+        <!-- Error -->
+        <div id="auth-error" class="auth-error" style="display: none"></div>
+
+        <!-- Login form -->
+        <form id="login-form" onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input
+              class="form-input"
+              type="email"
+              id="login-email"
+              placeholder="you@example.com"
+              required
+              autocomplete="email"
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input
+              class="form-input"
+              type="password"
+              id="login-password"
+              placeholder="••••••••"
+              required
+              autocomplete="current-password"
+            />
+          </div>
+          <button class="btn btn-primary w-full" type="submit" id="login-btn">
+            <span id="login-btn-text">Sign In</span>
+            <span
+              id="login-spinner"
+              class="spinner"
+              style="display: none"
+            ></span>
+          </button>
+        </form>
+
+        <!-- Register form -->
+        <form
+          id="register-form"
+          style="display: none"
+          onsubmit="handleRegister(event)"
+        >
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input
+              class="form-input"
+              type="text"
+              id="reg-name"
+              placeholder="Arjun Sharma"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input
+              class="form-input"
+              type="email"
+              id="reg-email"
+              placeholder="arjun@example.com"
+              required
+              autocomplete="email"
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input
+              class="form-input"
+              type="password"
+              id="reg-password"
+              placeholder="Min 8 characters"
+              required
+              minlength="8"
+              autocomplete="new-password"
+            />
+          </div>
+          <button class="btn btn-primary w-full" type="submit" id="reg-btn">
+            <span id="reg-btn-text">Create Account</span>
+            <span id="reg-spinner" class="spinner" style="display: none"></span>
+          </button>
+        </form>
+
+        <p
+          style="
+            text-align: center;
+            font-size: 0.78rem;
+            margin-top: 1.5rem;
+            color: var(--text-muted);
+          "
+        >
+          Your data stays in your personal knowledge graph. We never sell or
+          share it.
+        </p>
+      </div>
+    </div>
+
+    <script src="/static/js/api.js"></script>
+    <script>
+      // Redirect if already logged in
+      if (Session.valid()) window.location.href = "/";
+
+      function switchTab(tab) {
+        qsa(".tab").forEach((t) =>
+          t.classList.toggle("active", t.dataset.tab === tab),
+        );
+        el("login-form").style.display = tab === "login" ? "" : "none";
+        el("register-form").style.display = tab === "register" ? "" : "none";
+        el("auth-error").style.display = "none";
+      }
+
+      function showError(msg) {
+        const e = el("auth-error");
+        e.textContent = msg;
+        e.style.display = "";
+      }
+
+      async function loginAsDemo() {
+        const btn = el("demo-btn");
+        btn.disabled = true;
+        el("demo-btn-text").textContent = "Signing in…";
+        el("demo-spinner").style.display = "";
+        el("auth-error").style.display = "none";
+        try {
+          const { user, token } = await API.login(
+            "demo@synapsetwin.ai",
+            "Demo1234!",
+          );
+          Session.save(user, token);
+          window.location.href = "/";
+        } catch (err) {
+          showError(err.message || "Demo login failed. Please try again.");
+        } finally {
+          btn.disabled = false;
+          el("demo-btn-text").textContent = "Sign in";
+          el("demo-spinner").style.display = "none";
+        }
+      }
+
+      async function handleLogin(e) {
+        e.preventDefault();
+        el("login-btn").disabled = true;
+        el("login-btn-text").textContent = "Signing in…";
+        el("login-spinner").style.display = "";
+        el("auth-error").style.display = "none";
+        try {
+          const { user, token } = await API.login(
+            el("login-email").value.trim(),
+            el("login-password").value,
+          );
+          Session.save(user, token);
+          window.location.href = "/";
+        } catch (err) {
+          showError(err.message || "Sign in failed. Please try again.");
+        } finally {
+          el("login-btn").disabled = false;
+          el("login-btn-text").textContent = "Sign In";
+          el("login-spinner").style.display = "none";
+        }
+      }
+
+      async function handleRegister(e) {
+        e.preventDefault();
+        el("reg-btn").disabled = true;
+        el("reg-btn-text").textContent = "Creating account…";
+        el("reg-spinner").style.display = "";
+        el("auth-error").style.display = "none";
+        try {
+          const { user, token } = await API.register(
+            el("reg-name").value.trim(),
+            el("reg-email").value.trim(),
+            el("reg-password").value,
+          );
+          Session.save(user, token);
+          window.location.href = "/";
+        } catch (err) {
+          showError(err.message || "Registration failed. Please try again.");
+        } finally {
+          el("reg-btn").disabled = false;
+          el("reg-btn-text").textContent = "Create Account";
+          el("reg-spinner").style.display = "none";
+        }
+      }
+    </script>
+    <script src="/static/js/particles.js"></script>
+  </body>
+</html>

@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SynapseTwin — Learning &amp; Growth</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css"/>
+  <style>
+    .course-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+    .course-card:hover {
+      border-color: var(--accent-purple);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-glow);
+    }
+    .course-platform-badge {
+      font-size: 0.65rem; font-weight: 700;
+      padding: 2px 7px; border-radius: 20px; letter-spacing: 0.05em;
+    }
+    .badge-coursera { background: rgba(0,86,210,0.15); color: #1d6fd8; }
+    .badge-udemy    { background: rgba(124,58,237,0.15); color: var(--accent-purple); }
+    .course-rating  { color: #d97706; font-size: 0.78rem; font-weight: 600; }
+    .course-meta    { font-size: 0.73rem; color: var(--text-muted); margin-top: 0.3rem; }
+    .course-skills  { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; }
+    .skill-chip {
+      font-size: 0.65rem; background: rgba(124,58,237,0.10);
+      color: var(--accent-purple); padding: 2px 7px; border-radius: 20px; font-weight: 500;
+    }
+    .ai-insight-box {
+      background: linear-gradient(135deg, rgba(124,58,237,0.07) 0%, rgba(2,132,199,0.05) 100%);
+      border: 1px solid rgba(124,58,237,0.18);
+      border-radius: var(--radius-sm); padding: 1rem 1.125rem; margin-bottom: 1.25rem;
+    }
+    .platform-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .platform-tab {
+      padding: 0.4rem 1rem; border-radius: 20px; border: 1px solid var(--border);
+      font-size: 0.82rem; font-weight: 500; cursor: pointer;
+      background: var(--bg-elevated); color: var(--text-secondary); transition: all 0.2s;
+    }
+    .platform-tab.active {
+      background: var(--accent-purple); border-color: var(--accent-purple); color: #fff;
+    }
+    .course-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 0.875rem;
+    }
+    .learning-stats-row {
+      display: grid; grid-template-columns: repeat(4,1fr); gap: 0.75rem; margin-bottom: 1.5rem;
+    }
+    .ls-card {
+      text-align: center; background: var(--bg-card); border-radius: var(--radius-md);
+      padding: 1rem 0.5rem; border: 1px solid var(--border);
+    }
+    .ls-val { font-size: 1.6rem; font-weight: 800; color: var(--accent-purple); }
+    .ls-lbl { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem; }
+    .progress-log-form {
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 1.125rem;
+    }
+    .progress-log-form input, .progress-log-form select {
+      width: 100%; background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 6px; padding: 0.5rem 0.75rem; color: var(--text-primary);
+      font-size: 0.85rem; margin-bottom: 0.625rem; font-family: var(--font-sans);
+    }
+    .loading-pulse { animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    @media (max-width: 640px) {
+      .learning-stats-row { grid-template-columns: repeat(2,1fr); }
+      .course-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <a class="topbar-brand" href="/"><div class="brand-icon">🧠</div>SynapseTwin</a>
+    <div class="topbar-right">
+      <div class="twin-score-badge" id="score-badge">Twin Score: —</div>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Sign Out</button>
+    </div>
+  </header>
+
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-label">Core</div>
+      <a class="nav-item" href="/"><span class="nav-icon">🏠</span>Dashboard</a>
+      <a class="nav-item" href="/voice.html"><span class="nav-icon">🎙️</span>Voice Check-in</a>
+      <a class="nav-item" href="/insights.html"><span class="nav-icon">💡</span>Insights</a>
+      <a class="nav-item" href="/graph.html"><span class="nav-icon">🕸️</span>Knowledge Graph</a>
+      <a class="nav-item active" href="/learning.html"><span class="nav-icon">📚</span>Learning</a>
+      <a class="nav-item" href="/environment.html"><span class="nav-icon">🌍</span>Environment</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Personal</div>
+      <a class="nav-item" href="/profile.html"><span class="nav-icon">👤</span>Profile &amp; Goals</a>
+      <a class="nav-item" href="/enterprise.html"><span class="nav-icon">🏢</span>Enterprise</a>
+      <a class="nav-item" href="/integrations.html"><span class="nav-icon">🔗</span>Integrations</a>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div style="margin-bottom:1.5rem">
+      <h2 class="section-title" style="margin-bottom:0.25rem">📚 Learning &amp; Growth</h2>
+      <p style="color:var(--text-secondary);font-size:0.875rem">
+        AI-powered course recommendations from Coursera &amp; Udemy, personalised to your role and career goals.
+        Progress is tracked in your Knowledge Graph.
+      </p>
+    </div>
+
+    <!-- Stats row -->
+    <div class="learning-stats-row">
+      <div class="ls-card">
+        <div class="ls-val" id="stat-total">—</div>
+        <div class="ls-lbl">Courses Active</div>
+      </div>
+      <div class="ls-card">
+        <div class="ls-val" id="stat-completed">—</div>
+        <div class="ls-lbl">Completed</div>
+      </div>
+      <div class="ls-card">
+        <div class="ls-val" id="stat-skills">—</div>
+        <div class="ls-lbl">Skills Logged</div>
+      </div>
+      <div class="ls-card">
+        <div class="ls-val" id="stat-hours">—</div>
+        <div class="ls-lbl">Hours Logged</div>
+      </div>
+    </div>
+
+    <!-- AI Insight -->
+    <div class="ai-insight-box" id="learning-ai-insight" style="display:none">
+      <div style="font-size:0.7rem;color:var(--accent-purple);font-weight:700;margin-bottom:0.4rem;letter-spacing:0.04em">✦ AI LEARNING INSIGHT</div>
+      <div id="learning-ai-text" style="font-size:0.875rem;color:var(--text-secondary);line-height:1.65"></div>
+      <div id="learning-path-text" style="margin-top:0.5rem;font-size:0.78rem;color:var(--text-muted)"></div>
+    </div>
+
+    <!-- Recommendations card -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <span class="card-title">Recommended for You</span>
+        <button class="btn btn-ghost btn-sm" onclick="loadCourses(currentPlatform)">↻ Refresh</button>
+      </div>
+
+      <div class="platform-tabs">
+        <button class="platform-tab active" onclick="switchPlatform('both',this)">🎓 All</button>
+        <button class="platform-tab" onclick="switchPlatform('coursera',this)">Coursera</button>
+        <button class="platform-tab" onclick="switchPlatform('udemy',this)">Udemy</button>
+      </div>
+
+      <div id="courses-loading" style="text-align:center;padding:2.5rem;color:var(--text-muted)">
+        <div class="loading-pulse">🔍 Finding personalised courses for your role…</div>
+      </div>
+      <div class="course-grid" id="course-grid" style="display:none"></div>
+    </div>
+
+    <!-- Log Progress card -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <span class="card-title">📝 Log Course Progress</span>
+      </div>
+      <div class="progress-log-form">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.625rem">
+          <input id="lp-title"    type="text" placeholder="Course title…"/>
+          <input id="lp-url"      type="url"  placeholder="Course URL (optional)…"/>
+        </div>
+        <select id="lp-platform">
+          <option value="coursera">Coursera</option>
+          <option value="udemy">Udemy</option>
+          <option value="other">Other</option>
+        </select>
+        <div style="display:flex;align-items:center;gap:0.875rem;margin-bottom:0.625rem">
+          <label style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap;flex-shrink:0">Progress:</label>
+          <input id="lp-progress" type="range" min="0" max="100" value="50"
+                 style="flex:1;background:none;border:none;padding:0;margin-bottom:0;accent-color:var(--accent-purple)">
+          <span id="lp-progress-val" style="font-size:0.875rem;font-weight:700;color:var(--accent-purple);min-width:2.75rem;text-align:right">50%</span>
+        </div>
+        <input id="lp-skills" type="text" placeholder="Skills gained (comma-separated, e.g. Python, Leadership)…"/>
+        <button class="btn btn-primary" onclick="logProgress()" style="width:100%;margin-top:0.25rem">
+          Save Progress to Knowledge Graph
+        </button>
+        <div id="lp-message" style="font-size:0.8rem;margin-top:0.5rem;display:none;text-align:center"></div>
+      </div>
+    </div>
+
+    <!-- History card -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📖 Recent Activity</span>
+        <button class="btn btn-ghost btn-sm" onclick="loadHistory()">Refresh</button>
+      </div>
+      <div id="history-list" style="color:var(--text-muted);font-size:0.85rem">
+        <div class="loading-pulse" style="padding:1rem">Loading history…</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script>
+if (!Session.requireAuth()) throw new Error('redirect');
+const user = Session.user();
+function logout() { Session.clear(); window.location.href = '/onboarding.html'; }
+updateScoreBadge(user?.twinScore || '—');
+
+let currentPlatform = 'both';
+let allCourses = { coursera: [], udemy: [] };
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+async function loadLearningStats() {
+  try {
+    const data = await API.learningStats();
+    document.getElementById('stat-total').textContent     = data.totalCourses     ?? '0';
+    document.getElementById('stat-completed').textContent = data.completedCourses ?? '0';
+    document.getElementById('stat-skills').textContent    = data.skillsLearned?.length ?? '0';
+    document.getElementById('stat-hours').textContent     = data.totalHours ?? '0';
+  } catch (e) {}
+}
+
+// ── Courses ───────────────────────────────────────────────────────────────────
+async function loadCourses(platform = 'both') {
+  document.getElementById('courses-loading').style.display = 'block';
+  document.getElementById('course-grid').style.display = 'none';
+  document.getElementById('courses-loading').innerHTML =
+    '<div class="loading-pulse">🔍 Finding personalised courses for your role…</div>';
+  try {
+    const data = await API.learningRecommendations(platform);
+    if (data.ai_insight) {
+      document.getElementById('learning-ai-insight').style.display = 'block';
+      document.getElementById('learning-ai-text').textContent = data.ai_insight;
+      document.getElementById('learning-path-text').textContent =
+        data.learning_path ? '🗺️ ' + data.learning_path : '';
+    }
+    allCourses = { coursera: data.coursera || [], udemy: data.udemy || [] };
+    renderCourses(platform);
+  } catch (e) {
+    document.getElementById('courses-loading').innerHTML =
+      '<span style="color:var(--text-muted);font-size:0.85rem">⚠️ Could not load recommendations. Try again.</span>';
+  }
+}
+
+function renderCourses(platform) {
+  let courses = platform === 'coursera' ? allCourses.coursera
+              : platform === 'udemy'    ? allCourses.udemy
+              : [...allCourses.coursera, ...allCourses.udemy];
+
+  if (!courses.length) {
+    document.getElementById('courses-loading').innerHTML =
+      '<span style="color:var(--text-muted);font-size:0.85rem">No courses found for this filter.</span>';
+    document.getElementById('courses-loading').style.display = 'block';
+    document.getElementById('course-grid').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('course-grid').innerHTML = courses.map(c => {
+    const isCoursera = allCourses.coursera.includes(c);
+    const pLabel  = isCoursera ? 'Coursera' : 'Udemy';
+    const pClass  = isCoursera ? 'badge-coursera' : 'badge-udemy';
+    const stars   = '★'.repeat(Math.round(c.rating || 4)) + '☆'.repeat(5 - Math.round(c.rating || 4));
+    const skills  = (c.skills || []).map(s => `<span class="skill-chip">${s}</span>`).join('');
+    return `
+      <div class="course-card" onclick="window.open('${c.url}','_blank')">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.5rem">
+          <span class="course-platform-badge ${pClass}">${pLabel}</span>
+          <span style="font-size:0.7rem;background:rgba(5,150,105,0.12);color:#059669;padding:2px 6px;border-radius:10px">${c.level||'Intermediate'}</span>
+        </div>
+        <div style="font-size:0.87rem;font-weight:600;color:var(--text-primary);line-height:1.3;margin-bottom:0.25rem">${c.title}</div>
+        <div style="font-size:0.74rem;color:var(--text-muted);margin-bottom:0.35rem">by ${c.instructor||'Expert Instructor'}</div>
+        <div style="display:flex;align-items:center;gap:0.5rem">
+          <span class="course-rating">${stars} ${c.rating||4.5}</span>
+          <span style="font-size:0.7rem;color:var(--text-muted)">(${c.students||'Many'} students)</span>
+        </div>
+        <div class="course-meta">⏱ ${c.duration||'Self-paced'}</div>
+        <div class="course-skills">${skills}</div>
+        <div style="margin-top:0.625rem;font-size:0.74rem;color:var(--accent-cyan);font-weight:500">🔗 Open Course →</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('courses-loading').style.display = 'none';
+  document.getElementById('course-grid').style.display = 'grid';
+}
+
+function switchPlatform(platform, btn) {
+  currentPlatform = platform;
+  document.querySelectorAll('.platform-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (allCourses.coursera.length || allCourses.udemy.length) renderCourses(platform);
+  else loadCourses(platform);
+}
+
+// ── Progress logger ───────────────────────────────────────────────────────────
+document.getElementById('lp-progress').addEventListener('input', e => {
+  document.getElementById('lp-progress-val').textContent = e.target.value + '%';
+});
+
+async function logProgress() {
+  const title    = document.getElementById('lp-title').value.trim();
+  const url      = document.getElementById('lp-url').value.trim();
+  const platform = document.getElementById('lp-platform').value;
+  const progress = parseInt(document.getElementById('lp-progress').value) / 100;
+  const skills   = document.getElementById('lp-skills').value
+                     .split(',').map(s=>s.trim()).filter(Boolean);
+  const msg      = document.getElementById('lp-message');
+
+  if (!title) { Toast.warning('Missing field', 'Please enter a course title.'); return; }
+  msg.style.display = 'block';
+  msg.style.color   = 'var(--text-muted)';
+  msg.textContent   = 'Saving…';
+  try {
+    const data = await API.learningLogProgress(platform, title, url||`https://${platform}.com`, progress, skills);
+    msg.style.color = '#059669';
+    msg.textContent = data.message || '✅ Progress saved to Knowledge Graph!';
+    loadLearningStats();
+    loadHistory();
+  } catch (e) {
+    msg.style.color = '#dc2626';
+    msg.textContent = '⚠️ Failed to save. Try again.';
+  }
+}
+
+// ── History ───────────────────────────────────────────────────────────────────
+async function loadHistory() {
+  const el = document.getElementById('history-list');
+  try {
+    const data = await API.learningHistory(10);
+    const items = data.history || data || [];
+    if (!items.length) {
+      el.innerHTML = '<div class="empty-state" style="padding:1.5rem"><div class="empty-state-text">No courses logged yet — start tracking your learning above.</div></div>';
+      return;
+    }
+    el.innerHTML = items.map(h => `
+      <div style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:1.1rem">${h.platform==='coursera'?'📘':h.platform==='udemy'?'⚡':'📖'}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:0.85rem;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h.course_title||h.title||'Untitled'}</div>
+          <div style="font-size:0.72rem;color:var(--text-muted)">${h.platform||''} · ${Math.round((h.progress||0)*100)}% complete</div>
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);flex-shrink:0">${h.date||h.logged_at||''}</div>
+      </div>`).join('');
+  } catch (e) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;padding:1rem">Log some courses to see your history here.</div>';
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadLearningStats();
+loadCourses('both');
+loadHistory();
+</script>
+<script src="/static/js/particles.js"></script>
+</body>
+</html>

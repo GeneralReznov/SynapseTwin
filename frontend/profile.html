@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SynapseTwin — Profile & Goals</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css"/>
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <a class="topbar-brand" href="/"><div class="brand-icon">🧠</div>SynapseTwin</a>
+    <div class="topbar-right">
+      <div class="twin-score-badge" id="score-badge">Twin Score: —</div>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Sign Out</button>
+    </div>
+  </header>
+
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-label">Core</div>
+      <a class="nav-item" href="/"><span class="nav-icon">🏠</span>Dashboard</a>
+      <a class="nav-item" href="/voice.html"><span class="nav-icon">🎙️</span>Voice Check-in</a>
+      <a class="nav-item" href="/insights.html"><span class="nav-icon">💡</span>Insights</a>
+      <a class="nav-item" href="/graph.html"><span class="nav-icon">🕸️</span>Knowledge Graph</a>
+      <a class="nav-item" href="/learning.html"><span class="nav-icon">📚</span>Learning</a>
+      <a class="nav-item" href="/environment.html"><span class="nav-icon">🌍</span>Environment</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Personal</div>
+      <a class="nav-item active" href="/profile.html"><span class="nav-icon">👤</span>Profile & Goals</a>
+      <a class="nav-item" href="/enterprise.html"><span class="nav-icon">🏢</span>Enterprise</a>
+      <a class="nav-item" href="/integrations.html"><span class="nav-icon">🔗</span>Integrations</a>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <h2 class="section-title">👤 Profile & Goals</h2>
+
+    <div class="grid-2">
+      <!-- Profile card -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Account</span></div>
+        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem">
+          <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--accent-purple),var(--accent-cyan));display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;color:#fff" id="avatar-icon">—</div>
+          <div>
+            <div style="font-weight:700;font-size:1rem" id="profile-name">—</div>
+            <div style="font-size:0.8rem;color:var(--text-muted)" id="profile-email">—</div>
+            <div style="margin-top:0.25rem"><span class="badge badge-purple" id="profile-role">user</span></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Preferred Language</label>
+          <select class="form-select" id="lang-pref">
+            <option value="en-IN">English (India)</option>
+            <option value="hi-IN">Hindi</option>
+            <option value="ta-IN">Tamil</option>
+            <option value="te-IN">Telugu</option>
+            <option value="bn-IN">Bengali</option>
+            <option value="mr-IN">Marathi</option>
+          </select>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveLanguage()">Save Preference</button>
+        <hr class="divider"/>
+        <button class="btn btn-danger btn-sm" onclick="logout()">Sign Out</button>
+      </div>
+
+      <!-- Add goal -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Add Goal</span></div>
+        <div class="form-group">
+          <label class="form-label">Goal Title</label>
+          <input class="form-input" id="goal-title" placeholder="e.g. Run a 5K"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select class="form-select" id="goal-cat">
+            <option value="health">Health</option>
+            <option value="learning">Learning</option>
+            <option value="career">Career</option>
+            <option value="relationships">Relationships</option>
+            <option value="finance">Finance</option>
+            <option value="general" selected>General</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Target Date (optional)</label>
+          <input class="form-input" id="goal-date" type="date"/>
+        </div>
+        <button class="btn btn-primary" onclick="addGoal()" id="goal-btn">
+          <span id="goal-btn-text">Create Goal</span>
+          <span id="goal-spinner" class="spinner" style="display:none"></span>
+        </button>
+        <div id="goal-result" style="margin-top:1rem"></div>
+      </div>
+    </div>
+
+    <!-- Goals list -->
+    <div class="card" style="margin-top:1.25rem">
+      <div class="card-header">
+        <span class="card-title">Active Goals</span>
+        <button class="btn btn-ghost btn-sm" onclick="loadGoals()">Refresh</button>
+      </div>
+      <div id="goals-wrap">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script>
+if (!Session.requireAuth()) throw new Error('redirect');
+const user = Session.user();
+function logout() { Session.clear(); window.location.href = '/onboarding.html'; }
+
+// Populate profile
+el('profile-name').textContent  = user?.name  || '—';
+el('profile-email').textContent = user?.email || '—';
+el('profile-role').textContent  = user?.role  || 'user';
+el('avatar-icon').textContent   = (user?.name || 'U')[0].toUpperCase();
+updateScoreBadge(user?.twinScore || '—');
+
+// Pre-select saved language preference
+if (user?.language) {
+  const langSelect = el('lang-pref');
+  if (langSelect) langSelect.value = user.language;
+}
+
+async function saveLanguage() {
+  const lang = el('lang-pref').value;
+  try {
+    await API.setLang(lang);
+    // Sync language preference to localStorage so it persists across page refreshes
+    const stored = Session.user();
+    if (stored) {
+      stored.language = lang;
+      localStorage.setItem('st_user', JSON.stringify(stored));
+    }
+    Toast.success('Language saved', `Set to ${lang}`);
+  } catch(err) {
+    Toast.error('Failed to save', err.message);
+  }
+}
+
+async function addGoal() {
+  const title = el('goal-title').value.trim();
+  if (!title) { Toast.warning('Title required', ''); return; }
+
+  el('goal-btn').disabled = true;
+  el('goal-btn-text').textContent = 'Creating…';
+  el('goal-spinner').style.display = '';
+  el('goal-result').innerHTML = '';
+
+  try {
+    const res = await API.createGoal({
+      title,
+      category:   el('goal-cat').value,
+      targetDate: el('goal-date').value || null,
+    });
+
+    el('goal-result').innerHTML = `<div class="alert alert-success"><div><div class="alert-title">Goal created!</div>${
+      res.aiBreakdown ? `<div class="alert-message">AI Milestones: ${(res.aiBreakdown.milestones||[]).join(' · ')}</div>` : ''
+    }</div></div>`;
+
+    el('goal-title').value = '';
+    el('goal-date').value  = '';
+    loadGoals();
+    Toast.success('Goal added to graph', title);
+  } catch(err) {
+    Toast.error('Failed to create goal', err.message);
+  } finally {
+    el('goal-btn').disabled = false;
+    el('goal-btn-text').textContent = 'Create Goal';
+    el('goal-spinner').style.display = 'none';
+  }
+}
+
+async function loadGoals() {
+  const wrap = el('goals-wrap');
+  wrap.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  try {
+    const { goals } = await API.listGoals();
+    if (!goals.length) {
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🎯</div><div class="empty-state-text">No goals yet. Create your first goal above.</div></div>';
+      return;
+    }
+    wrap.innerHTML = goals.map((g, idx) => `
+      <div style="border:1px solid var(--border);border-radius:var(--radius-md);padding:1rem;margin-bottom:0.75rem">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:0.5rem">
+          <div>
+            <div style="font-weight:600">${g.title.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+            <div style="display:flex;gap:0.4rem;margin-top:0.3rem">
+              <span class="badge badge-purple">${g.category}</span>
+              ${g.isBlocked ? '<span class="badge badge-red">⚠ Blocked</span>' : ''}
+              ${g.targetDate ? `<span class="badge badge-cyan">📅 ${g.targetDate}</span>` : ''}
+            </div>
+          </div>
+          <span style="font-size:1.1rem;font-weight:800;color:var(--accent-neon)">${g.progress||0}%</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" style="width:${g.progress||0}%"></div></div>
+        <div style="display:flex;gap:0.5rem;margin-top:0.75rem;align-items:center">
+          <input type="range" min="0" max="100" value="${g.progress||0}" style="flex:1;accent-color:var(--accent-purple)"
+            data-goal-idx="${idx}"
+            oninput="this.nextElementSibling.textContent=this.value+'%'"/>
+          <span style="font-size:0.8rem;color:var(--text-muted);width:36px">${g.progress||0}%</span>
+        </div>
+        ${g.dependsOnHabits?.length ? `<div style="margin-top:0.5rem;font-size:0.75rem;color:var(--text-muted)">Habits: ${g.dependsOnHabits.join(', ')}</div>` : ''}
+      </div>
+    `).join('');
+    // Attach change listeners using data attributes to avoid XSS via inline event handlers
+    wrap.querySelectorAll('input[type=range][data-goal-idx]').forEach(input => {
+      const idx = parseInt(input.dataset.goalIdx);
+      input.addEventListener('change', () => updateProgress(goals[idx].title, input.value));
+    });
+  } catch(err) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-state-text">${err.message.replace(/</g,'&lt;')}</div></div>`;
+  }
+}
+
+async function updateProgress(title, progress) {
+  try {
+    await API.updateProgress(title, parseInt(progress));
+    Toast.success('Progress updated', `${title}: ${progress}%`);
+  } catch(err) {
+    Toast.error('Update failed', err.message);
+  }
+}
+
+loadGoals();
+</script>
+<script src="/static/js/particles.js"></script>
+</body>
+</html>

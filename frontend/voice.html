@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SynapseTwin — Voice Check-in</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css"/>
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <a class="topbar-brand" href="/"><div class="brand-icon">🧠</div>SynapseTwin</a>
+    <div class="topbar-right">
+      <div class="twin-score-badge" id="score-badge">Twin Score: —</div>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Sign Out</button>
+    </div>
+  </header>
+
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-label">Core</div>
+      <a class="nav-item" href="/"><span class="nav-icon">🏠</span>Dashboard</a>
+      <a class="nav-item active" href="/voice.html"><span class="nav-icon">🎙️</span>Voice Check-in</a>
+      <a class="nav-item" href="/insights.html"><span class="nav-icon">💡</span>Insights</a>
+      <a class="nav-item" href="/graph.html"><span class="nav-icon">🕸️</span>Knowledge Graph</a>
+      <a class="nav-item" href="/learning.html"><span class="nav-icon">📚</span>Learning</a>
+      <a class="nav-item" href="/environment.html"><span class="nav-icon">🌍</span>Environment</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Personal</div>
+      <a class="nav-item" href="/profile.html"><span class="nav-icon">👤</span>Profile & Goals</a>
+      <a class="nav-item" href="/enterprise.html"><span class="nav-icon">🏢</span>Enterprise</a>
+      <a class="nav-item" href="/integrations.html"><span class="nav-icon">🔗</span>Integrations</a>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div style="margin-bottom:1.5rem">
+      <h2 class="section-title" style="margin-bottom:0.25rem">🎙️ Voice Check-in</h2>
+      <p style="color:var(--text-secondary);font-size:0.875rem">
+        Tell your AI twin about your day. Speak naturally in Hindi, English, Tamil, or any Indian language
+        — Sarvam AI understands and updates your Knowledge Graph automatically.
+      </p>
+    </div>
+
+    <div class="grid-2">
+      <!-- Input panel -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">How are you doing today?</span></div>
+
+        <!-- Language selector -->
+        <div class="form-group">
+          <label class="form-label">Language</label>
+          <select class="form-select" id="lang-select">
+            <option value="en-IN">🇮🇳 English (India)</option>
+            <option value="hi-IN" selected>🇮🇳 Hindi — हिन्दी</option>
+            <option value="ta-IN">🇮🇳 Tamil — தமிழ்</option>
+            <option value="te-IN">🇮🇳 Telugu — తెలుగు</option>
+            <option value="bn-IN">🇮🇳 Bengali — বাংলা</option>
+            <option value="mr-IN">🇮🇳 Marathi — मराठी</option>
+            <option value="gu-IN">🇮🇳 Gujarati — ગુજરાતી</option>
+            <option value="kn-IN">🇮🇳 Kannada — ಕನ್ನಡ</option>
+            <option value="ml-IN">🇮🇳 Malayalam — മലയാളം</option>
+          </select>
+        </div>
+
+        <!-- Voice button -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1rem;padding:1.5rem 0">
+          <button class="voice-btn" id="voice-btn" onclick="toggleRecording()">🎙️</button>
+          <div id="voice-status" style="font-size:0.85rem;color:var(--text-muted)">Tap to start recording</div>
+          <div id="recording-timer" style="font-size:1.2rem;font-weight:700;color:var(--danger);display:none">0:00</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);text-align:center;max-width:240px">
+            Example: <em>"आज बहुत थका हुआ महसूस कर रहा हूँ।"</em> — Sarvam understands and replies in Hindi.
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:0.5rem;margin:0.5rem 0 1rem">
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+          <span style="font-size:0.75rem;color:var(--text-muted)">or type below</span>
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+        </div>
+
+        <!-- Text input -->
+        <div class="form-group">
+          <textarea class="form-textarea" id="text-input"
+            placeholder="e.g. 'Slept 7 hours, went for a 30-min run, focused 5 hours on work, feeling a bit stressed about the project deadline...'
+&#10;Your AI twin extracts: sleep · exercise · focus · mood · habits · goals → updates your Knowledge Graph."
+            rows="5"></textarea>
+        </div>
+
+        <div style="display:flex;gap:0.75rem">
+          <button class="btn btn-primary" style="flex:1" id="submit-btn" onclick="submitText()">
+            <span id="submit-text">Process with 7 AI Agents</span>
+            <span id="submit-spinner" class="spinner" style="display:none"></span>
+          </button>
+          <button class="btn btn-outline btn-sm" onclick="clearAll()" title="Clear">🗑️</button>
+        </div>
+      </div>
+
+      <!-- Results panel -->
+      <div id="results-panel" class="card">
+        <div class="card-header">
+          <span class="card-title">Twin Response</span>
+          <span class="badge badge-cyan" id="lang-badge" style="display:none"></span>
+        </div>
+        <div id="results-content">
+          <div class="empty-state">
+            <div class="empty-state-icon">🤖</div>
+            <div class="empty-state-text">Your AI Digital Twin is waiting for your daily check-in</div>
+            <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem">
+              Every interaction updates your Knowledge Graph and evolves your twin
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7 Specialized Agent Pipeline -->
+    <div id="pipeline-wrap" style="display:none;margin-top:1.5rem">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">7-Agent Pipeline</span>
+          <span class="badge badge-purple" id="pipeline-time"></span>
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:1rem">
+          Input pre-processors → 7 specialized agents analyze your entry and update the Knowledge Graph
+        </div>
+
+        <!-- Pre-processors -->
+        <div style="margin-bottom:0.75rem">
+          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:0.4rem">Input Processing</div>
+          <div id="preprocessor-stages" style="display:flex;gap:0.5rem;flex-wrap:wrap"></div>
+        </div>
+
+        <!-- 7 Specialized Agents -->
+        <div>
+          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:0.4rem">Specialized Agents</div>
+          <div id="agent-stages" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.5rem"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script>
+if (!Session.requireAuth()) throw new Error('redirect');
+
+const user = Session.user();
+updateScoreBadge(user?.twinScore || '—');
+
+let mediaRecorder = null, audioChunks = [], isRecording = false, timerInterval = null, recordingSeconds = 0;
+
+function logout() { Session.clear(); window.location.href = '/onboarding.html'; }
+
+async function toggleRecording() {
+  if (isRecording) stopRecording();
+  else await startRecording();
+}
+
+async function startRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Negotiate MIME type: iOS Safari doesn't support audio/webm
+    const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus', '']
+      .find(t => t === '' || MediaRecorder.isTypeSupported(t)) || '';
+    mediaRecorder  = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+    audioChunks    = [];
+    isRecording    = true;
+    recordingSeconds = 0;
+
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.onstop = processAudio;
+    mediaRecorder.start(100);
+
+    el('voice-btn').classList.add('recording');
+    el('voice-btn').textContent = '⏹️';
+    el('voice-status').textContent = 'Recording… tap to stop';
+    el('recording-timer').style.display = '';
+
+    timerInterval = setInterval(() => {
+      recordingSeconds++;
+      const m = Math.floor(recordingSeconds / 60), s = recordingSeconds % 60;
+      el('recording-timer').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+      if (recordingSeconds >= 120) stopRecording();
+    }, 1000);
+  } catch(err) {
+    Toast.error('Microphone access denied', 'Allow microphone access and try again.');
+  }
+}
+
+function stopRecording() {
+  if (mediaRecorder && isRecording) {
+    mediaRecorder.stop();
+    mediaRecorder.stream.getTracks().forEach(t => t.stop());
+    isRecording = false;
+    clearInterval(timerInterval);
+    el('voice-btn').classList.remove('recording');
+    el('voice-btn').textContent = '🎙️';
+    el('voice-status').textContent = 'Processing audio…';
+    el('recording-timer').style.display = 'none';
+  }
+}
+
+function _refreshTwinScore(result) {
+  if (result && result.twinScore != null) {
+    const stored = Session.user();
+    if (stored) {
+      stored.twinScore = result.twinScore;
+      localStorage.setItem('st_user', JSON.stringify(stored));
+      updateScoreBadge(result.twinScore);
+    }
+  }
+}
+
+async function processAudio() {
+  const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+  const langCode = el('lang-select').value;
+  setLoading(true);
+  try {
+    const result = await API.voiceProcess(blob, langCode);
+    if (result.transcript) el('text-input').value = result.transcript;
+    renderResults(result);
+    _refreshTwinScore(result);
+    Toast.success('Check-in logged!', `Language: ${result.detectedLanguageName || 'English'}`);
+  } catch(err) {
+    Toast.error('Voice processing failed', err.message);
+  } finally {
+    setLoading(false);
+    el('voice-status').textContent = 'Tap to start recording';
+  }
+}
+
+async function submitText() {
+  const text = el('text-input').value.trim();
+  if (!text) { Toast.warning('Enter some text', 'Tell me about your day!'); return; }
+  const langCode = el('lang-select').value;
+  setLoading(true);
+  try {
+    const result = await API.process(text, langCode);
+    renderResults(result);
+    _refreshTwinScore(result);
+    Toast.success('Check-in processed!', `Twin Score: ${result.twinScore}`);
+  } catch(err) {
+    Toast.error('Processing failed', err.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function setLoading(on) {
+  el('submit-btn').disabled = on;
+  el('submit-text').textContent = on ? 'Running 7 Agents…' : 'Process with 7 AI Agents';
+  el('submit-spinner').style.display = on ? '' : 'none';
+  el('voice-btn').disabled = on;
+}
+
+function renderResults(r) {
+  const wrap = el('results-content');
+
+  // Language badge
+  if (r.detectedLanguageName) {
+    el('lang-badge').textContent = r.detectedLanguageName;
+    el('lang-badge').style.display = '';
+  }
+
+  const bd = r.twinBreakdown || {};
+
+  wrap.innerHTML = `
+    <!-- Score row -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.25rem">
+      <div style="text-align:center;background:var(--bg-elevated);border-radius:var(--radius-sm);padding:1rem">
+        <div style="font-size:2.2rem;font-weight:900;color:${scoreColor(r.twinScore)}">${r.twinScore}</div>
+        <div style="font-size:0.72rem;color:var(--text-muted)">Twin Score</div>
+      </div>
+      <div style="text-align:center;background:var(--bg-elevated);border-radius:var(--radius-sm);padding:1rem">
+        <div style="font-size:2.2rem;font-weight:900;color:${burnoutColor(r.burnoutScore)}">${r.burnoutScore}</div>
+        <div style="font-size:0.72rem;color:var(--text-muted)">Burnout Risk</div>
+      </div>
+    </div>
+
+    <!-- Badges -->
+    <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1rem">
+      ${r.emotion?.emotion ? `<span class="badge badge-purple">${r.emotion.emotion}</span>` : ''}
+      ${r.memoryUpdated ? `<span class="badge badge-green">✓ Graph Updated</span>` : ''}
+      ${(r.riskChain||[]).length ? `<span class="badge badge-red">⚠ ${r.riskChain.join(' → ')}</span>` : ''}
+    </div>
+
+    <!-- Twin Response -->
+    <div style="background:var(--bg-elevated);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1rem;border-left:3px solid var(--accent-purple)">
+      <div style="font-size:0.68rem;color:var(--text-muted);margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.05em">Twin Response</div>
+      <div style="font-size:0.9rem;line-height:1.6;color:var(--text-primary)">${r.twinResponse || '—'}</div>
+    </div>
+
+    <!-- Dimension Breakdown -->
+    ${r.twinBreakdown ? `
+    <div style="margin-bottom:1rem">
+      <div style="font-size:0.68rem;color:var(--text-muted);margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.05em">Dimension Breakdown</div>
+      ${renderDimensions(r.twinBreakdown)}
+    </div>` : ''}
+
+    <!-- Recommendations -->
+    ${(r.recommendations?.today?.length || r.recommendations?.thisWeek?.length) ? `
+    <div>
+      <div style="font-size:0.68rem;color:var(--text-muted);margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.05em">Today's Recommendations</div>
+      ${(r.recommendations.today||[]).map(rec =>
+        `<div style="display:flex;gap:0.5rem;font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.35rem;line-height:1.4">
+          <span style="color:var(--accent-purple);flex-shrink:0">→</span>${rec}
+        </div>`
+      ).join('')}
+    </div>` : ''}
+  `;
+
+  // TTS playback
+  if (r.ttsAudio) {
+    try {
+      const audio = new Audio(`data:audio/wav;base64,${r.ttsAudio}`);
+      audio.play().catch(() => {});
+    } catch {}
+  }
+
+  // Pipeline stages
+  if (r.stages?.length) {
+    el('pipeline-wrap').style.display = '';
+    if (r.processingMs) el('pipeline-time').textContent = `${r.processingMs}ms total`;
+
+    const preStages = r.stages.filter(s => !s.isSpecialized && s.agent !== 'Goal Planner' && s.agent !== 'Prediction Engine');
+    const agentStages = r.stages.filter(s => s.isSpecialized || s.agent === 'Goal Planner' || s.agent === 'Prediction Engine');
+
+    const agentIcons = {
+      'Memory Agent':         '🧠',
+      'Health Agent':         '💪',
+      'Productivity Agent':   '🎯',
+      'Learning Agent':       '📚',
+      'Habit Agent':          '🔄',
+      'Reflection Agent':     '🪞',
+      'Recommendation Agent': '💡',
+      'Goal Planner':         '🏆',
+      'Prediction Engine':    '🔮',
+    };
+
+    el('preprocessor-stages').innerHTML = preStages.map(s => `
+      <div class="pipeline-stage" style="flex:1;min-width:100px">
+        <div class="stage-dot ${s.status}"></div>
+        <div>
+          <div style="font-size:0.75rem;font-weight:600">${s.agent}</div>
+          <div style="font-size:0.65rem;color:var(--text-muted)">${s.ms}ms</div>
+        </div>
+      </div>`).join('');
+
+    el('agent-stages').innerHTML = agentStages.map(s => `
+      <div class="pipeline-stage">
+        <span style="font-size:1.2rem">${agentIcons[s.agent] || '🤖'}</span>
+        <div>
+          <div style="font-size:0.78rem;font-weight:600">${s.agent}</div>
+          <div style="font-size:0.65rem;color:${s.status==='error'?'var(--danger)':'var(--text-muted)'}">${s.status==='error'?'error':s.ms+'ms'}</div>
+        </div>
+      </div>`).join('');
+  }
+}
+
+function clearAll() {
+  el('text-input').value = '';
+  el('lang-badge').style.display = 'none';
+  el('results-content').innerHTML = `
+    <div class="empty-state">
+      <div class="empty-state-icon">🤖</div>
+      <div class="empty-state-text">Your AI Digital Twin is waiting for your daily check-in</div>
+    </div>`;
+  el('pipeline-wrap').style.display = 'none';
+}
+</script>
+<script src="/static/js/particles.js"></script>
+</body>
+</html>

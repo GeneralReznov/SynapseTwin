@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SynapseTwin — Enterprise</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css"/>
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <a class="topbar-brand" href="/"><div class="brand-icon">🧠</div>SynapseTwin</a>
+    <div class="topbar-right">
+      <div class="twin-score-badge" id="score-badge">Twin Score: —</div>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Sign Out</button>
+    </div>
+  </header>
+
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-label">Core</div>
+      <a class="nav-item" href="/"><span class="nav-icon">🏠</span>Dashboard</a>
+      <a class="nav-item" href="/voice.html"><span class="nav-icon">🎙️</span>Voice Check-in</a>
+      <a class="nav-item" href="/insights.html"><span class="nav-icon">💡</span>Insights</a>
+      <a class="nav-item" href="/graph.html"><span class="nav-icon">🕸️</span>Knowledge Graph</a>
+      <a class="nav-item" href="/learning.html"><span class="nav-icon">📚</span>Learning</a>
+      <a class="nav-item" href="/environment.html"><span class="nav-icon">🌍</span>Environment</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Personal</div>
+      <a class="nav-item" href="/profile.html"><span class="nav-icon">👤</span>Profile & Goals</a>
+      <a class="nav-item active" href="/enterprise.html"><span class="nav-icon">🏢</span>Enterprise</a>
+      <a class="nav-item" href="/integrations.html"><span class="nav-icon">🔗</span>Integrations</a>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
+      <h2 class="section-title" style="margin:0">🏢 Enterprise Dashboard</h2>
+      <span class="badge badge-orange">Manager Only</span>
+    </div>
+    <div class="alert alert-info" style="margin-bottom:1.5rem">
+      <div>
+        <div class="alert-title">Privacy Protected</div>
+        <div class="alert-message">Individual journals are never shared. Only aggregated, anonymized team metrics are shown here.</div>
+      </div>
+    </div>
+
+    <!-- Team ID input -->
+    <div class="card" style="margin-bottom:1.5rem">
+      <div class="card-header"><span class="card-title">Team Lookup</span></div>
+      <div style="display:flex;gap:0.75rem;align-items:flex-end">
+        <div class="form-group" style="flex:1;margin:0">
+          <label class="form-label">Team ID</label>
+          <input class="form-input" id="team-id" placeholder="e.g. team_engineering" value="team_engineering"/>
+        </div>
+        <div class="form-group" style="width:100px;margin:0">
+          <label class="form-label">Days</label>
+          <select class="form-select" id="days-select">
+            <option value="7">7 days</option>
+            <option value="14" selected>14 days</option>
+            <option value="30">30 days</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="loadTeam()" id="load-btn">Load Team</button>
+      </div>
+    </div>
+
+    <!-- Manager role notice -->
+    <div id="role-notice" class="alert alert-warning" style="margin-bottom:1.5rem;display:none">
+      <div>
+        <div class="alert-title">Manager Role Required</div>
+        <div class="alert-message">Your account needs manager or HR role to access enterprise analytics. Contact your administrator.</div>
+      </div>
+    </div>
+
+    <div id="team-content" style="display:none">
+      <!-- Health score -->
+      <div class="grid-4 mb-4">
+        <div class="stat-card">
+          <div class="stat-icon">❤️</div>
+          <div class="stat-value" id="health-score">—</div>
+          <div class="stat-label">Team Health Score</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value" id="active-members">—</div>
+          <div class="stat-label">Active Members</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">😊</div>
+          <div class="stat-value" id="team-mood">—</div>
+          <div class="stat-label">Avg Mood</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🔥</div>
+          <div class="stat-value" id="team-burnout" style="color:var(--warning)">—</div>
+          <div class="stat-label">Avg Burnout Risk</div>
+        </div>
+      </div>
+
+      <div class="grid-2 mb-4">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Team Analytics</span></div>
+          <div id="analytics-table"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Recommendations</span></div>
+          <div id="recs-list"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Anonymized Risk Events</span>
+          <span class="badge badge-orange" id="risk-count">0 events</span>
+        </div>
+        <div id="risk-list"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script>
+if (!Session.requireAuth()) throw new Error('redirect');
+const user = Session.user();
+function logout() { Session.clear(); window.location.href = '/onboarding.html'; }
+updateScoreBadge(user?.twinScore || '—');
+
+const MANAGER_ROLES = ['manager','admin','hr','director'];
+if (!MANAGER_ROLES.includes((user?.role||'').toLowerCase())) {
+  el('role-notice').style.display = '';
+}
+
+async function loadTeam() {
+  const teamId = el('team-id').value.trim();
+  const days   = parseInt(el('days-select').value);
+  if (!teamId) { Toast.warning('Team ID required', ''); return; }
+
+  const btn = el('load-btn');
+  btn.disabled = true; btn.textContent = 'Loading…';
+
+  try {
+    const data = await API.team(teamId, days);
+    renderTeam(data);
+    el('team-content').style.display = '';
+    Toast.success('Team data loaded', teamId);
+  } catch(err) {
+    if (err.message.includes('403') || err.message.toLowerCase().includes('forbidden')) {
+      el('role-notice').style.display = '';
+    } else {
+      Toast.error('Failed to load team', err.message);
+    }
+  } finally {
+    btn.disabled = false; btn.textContent = 'Load Team';
+  }
+}
+
+function renderTeam(data) {
+  const a = data.analytics || {};
+  el('health-score').textContent   = data.teamHealthScore || '—';
+  el('active-members').textContent = a.activeMembers || '0';
+  el('team-mood').textContent      = a.avgMoodScore ? Number(a.avgMoodScore).toFixed(1)+'/10' : '—';
+  el('team-burnout').textContent   = a.avgBurnoutScore ? Math.round(a.avgBurnoutScore)+'/100' : '—';
+
+  el('analytics-table').innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+      ${[
+        ['Avg Mood Score',    (a.avgMoodScore||0).toFixed(1)+' / 10'],
+        ['Avg Sleep Hours',   (a.avgSleepHours||0).toFixed(1)+'h'],
+        ['Avg Focus Hours',   (a.avgFocusHours||0).toFixed(1)+'h'],
+        ['Avg Burnout Score', Math.round(a.avgBurnoutScore||0)+' / 100'],
+        ['Active Members',    a.activeMembers||0],
+      ].map(([k,v]) => `
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:0.6rem 0.25rem;color:var(--text-muted)">${k}</td>
+          <td style="padding:0.6rem 0.25rem;font-weight:700;text-align:right">${v}</td>
+        </tr>
+      `).join('')}
+    </table>
+    <div style="margin-top:0.75rem;font-size:0.75rem;color:var(--text-muted)">
+      Team: ${data.teamId} · ${data.days}-day window · Generated ${new Date(data.generatedAt).toLocaleString()}
+    </div>
+  `;
+
+  const recs = data.recommendations || [];
+  el('recs-list').innerHTML = recs.length
+    ? recs.map(r => `<div class="alert alert-info" style="margin-bottom:0.5rem"><div class="alert-title">${r}</div></div>`).join('')
+    : '<div class="empty-state" style="padding:1.5rem"><div class="empty-state-text">No recommendations</div></div>';
+
+  const risks = data.anonymizedRisk || [];
+  el('risk-count').textContent = `${risks.length} events`;
+  el('risk-list').innerHTML = risks.length
+    ? `<table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+        <thead><tr style="color:var(--text-muted);font-size:0.75rem;border-bottom:1px solid var(--border)">
+          <th style="padding:0.5rem;text-align:left">Date</th>
+          <th style="padding:0.5rem;text-align:left">Member</th>
+          <th style="padding:0.5rem;text-align:right">Burnout Score</th>
+        </tr></thead>
+        <tbody>${risks.map(r => `
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:0.5rem;color:var(--text-muted)">${r.date}</td>
+            <td style="padding:0.5rem">${r.memberId || 'Anonymous'}</td>
+            <td style="padding:0.5rem;text-align:right;font-weight:700;color:${burnoutColor(r.score)}">${Math.round(r.score)}</td>
+          </tr>`).join('')}
+        </tbody></table>`
+    : '<div class="empty-state" style="padding:1.5rem"><div class="empty-state-text">No high-risk events in this period ✅</div></div>';
+}
+</script>
+<script src="/static/js/particles.js"></script>
+</body>
+</html>
