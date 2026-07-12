@@ -215,7 +215,7 @@ flowchart LR
     style TTS fill:#5b2a86,color:#fff
 ```
 
-### Provider fallback chain (why the demo never breaks on stage)
+### Provider fallback chain
 
 Every AI call goes through a single orchestration point
 (`app/services/sarvam.py`) that tries **Sarvam first**, only falling back if
@@ -249,7 +249,7 @@ flowchart TD
 
 ### Why this is more than "an API call"
 
-- **Every** turn of the product — not just a demo screen — passes through
+- **Every** turn of the product — passes through
   Sarvam: language detection → translation → emotion → entity extraction →
   response generation → speech synthesis is a single Sarvam-first chain, not
   an optional add-on feature.
