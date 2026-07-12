@@ -7,6 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/styles.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <style>
     .weather-hero {
       background: linear-gradient(135deg, rgba(2,132,199,0.09) 0%, rgba(124,58,237,0.07) 100%);
@@ -75,10 +77,25 @@
     .env-stat-lbl { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem; }
     .loading-pulse { animation: pulse 1.5s ease-in-out infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    #map {
+      width: 100%; height: 340px; border-radius: var(--radius-md);
+      border: 1px solid var(--border); z-index: 0; background: var(--bg-secondary);
+    }
+    .map-toolbar { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+    .map-toolbar .location-btn { width: auto; flex: 1; margin-bottom: 0; min-width: 180px; }
+    .map-toolbar .location-btn.tracking { background: rgba(5,150,105,0.12); color: #059669; border-color: rgba(5,150,105,0.3); }
+    .map-address {
+      margin-top: 0.75rem; padding: 0.65rem 0.875rem; border-radius: var(--radius-sm);
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      font-size: 0.8rem; color: var(--text-secondary); display: flex; gap: 0.5rem; align-items: flex-start;
+    }
+    .map-coords { font-size: 0.68rem; color: var(--text-muted); margin-top: 0.2rem; font-family: monospace; }
+    .leaflet-popup-content { font-size: 0.8rem; }
     @media (max-width: 640px) {
       .forecast-row { grid-template-columns: repeat(3,1fr); }
       .weather-meta-grid { grid-template-columns: repeat(2,1fr); }
       .env-stats-row { grid-template-columns: repeat(2,1fr); }
+      #map { height: 260px; }
     }
   </style>
 </head>
@@ -178,6 +195,26 @@
       </div>
     </div>
 
+    <!-- Live Location Map (OpenStreetMap / Leaflet — free, no API key) -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <span class="card-title">🗺️ Live Location Map</span>
+        <button class="btn btn-ghost btn-sm" onclick="loadLocationPins()">↻ Refresh pins</button>
+      </div>
+      <div class="map-toolbar">
+        <button class="location-btn" id="locate-btn" onclick="locateOnce()">🎯 Pinpoint My Location</button>
+        <button class="location-btn" id="track-btn" onclick="toggleTracking()">📡 Start Live Tracking</button>
+      </div>
+      <div id="map"></div>
+      <div class="map-address" id="map-address" style="display:none">
+        <span>📍</span>
+        <div>
+          <div id="map-address-text">—</div>
+          <div class="map-coords" id="map-coords"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- AI Impact Analysis -->
     <div class="card mb-4">
       <div class="card-header">
@@ -202,6 +239,8 @@
   </main>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="/static/js/api.js"></script>
 <script>
 if (!Session.requireAuth()) throw new Error('redirect');
@@ -233,6 +272,7 @@ async function getWeatherByGPS() {
       const { latitude: lat, longitude: lon } = pos.coords;
       _lastWeatherParams = { lat, lon };
       document.getElementById('city-input').value = '';
+      if (map) setLiveMarker(lat, lon, pos.coords.accuracy);
       await loadWeather({ lat, lon });
       await loadForecast({ lat, lon });
     },
@@ -378,10 +418,12 @@ async function logLocation() {
         msg.style.color = '#059669';
         msg.textContent = data.insight || '✅ Location logged to Knowledge Graph!';
         _lastWeatherParams = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+        if (map) setLiveMarker(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
         await loadWeather(_lastWeatherParams);
         await loadForecast(_lastWeatherParams);
         loadHistory();
         loadEnvStats();
+        loadLocationPins();
       } catch (e) {
         msg.style.color = '#dc2626';
         msg.textContent = '⚠️ Could not log location. Try again.';
@@ -449,7 +491,126 @@ async function loadEnvStats() {
   } catch (e) {}
 }
 
+// ── Live Location Map (Leaflet + OpenStreetMap tiles — free, no API key) ──────
+let map, liveMarker, accuracyCircle, watchId = null;
+const pinMarkers = [];
+
+function initMap() {
+  map = L.map('map', { zoomControl: true }).setView([20.5937, 78.9629], 4.5); // India default view
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  }).addTo(map);
+}
+
+function setLiveMarker(lat, lon, accuracy) {
+  const latlng = [lat, lon];
+  if (!liveMarker) {
+    const icon = L.divIcon({
+      className: '', html: '<div style="width:16px;height:16px;border-radius:50%;background:#0284c7;border:3px solid #fff;box-shadow:0 0 0 2px rgba(2,132,199,0.4)"></div>',
+      iconSize: [16, 16], iconAnchor: [8, 8],
+    });
+    liveMarker = L.marker(latlng, { icon, zIndexOffset: 1000 }).addTo(map).bindPopup('📍 You are here');
+  } else {
+    liveMarker.setLatLng(latlng);
+  }
+  if (accuracy) {
+    if (!accuracyCircle) {
+      accuracyCircle = L.circle(latlng, { radius: accuracy, color: '#0284c7', fillColor: '#0284c7', fillOpacity: 0.1, weight: 1 }).addTo(map);
+    } else {
+      accuracyCircle.setLatLng(latlng);
+      accuracyCircle.setRadius(accuracy);
+    }
+  }
+  map.setView(latlng, 15);
+
+  document.getElementById('map-coords').textContent =
+    `${lat.toFixed(6)}, ${lon.toFixed(6)}  ·  ±${Math.round(accuracy || 0)}m accuracy`;
+  reverseGeocode(lat, lon);
+}
+
+async function reverseGeocode(lat, lon) {
+  const el = document.getElementById('map-address');
+  const txt = document.getElementById('map-address-text');
+  el.style.display = 'flex';
+  txt.textContent = 'Looking up address…';
+  try {
+    // Nominatim — OpenStreetMap's free reverse-geocoding service, no API key required.
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=16`, {
+      headers: { 'Accept-Language': 'en' },
+    });
+    const data = await res.json();
+    txt.textContent = data.display_name || 'Address unavailable for this location.';
+  } catch (e) {
+    txt.textContent = 'Address lookup unavailable (offline or rate-limited).';
+  }
+}
+
+function locateOnce() {
+  if (!navigator.geolocation) { Toast.error('Not supported', 'Geolocation is not available in this browser.'); return; }
+  const btn = document.getElementById('locate-btn');
+  btn.textContent = '🎯 Locating…';
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      btn.textContent = '🎯 Pinpoint My Location';
+      setLiveMarker(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+    },
+    err => {
+      btn.textContent = '🎯 Pinpoint My Location';
+      Toast.error('Location error', err.message || 'Could not get your precise location.');
+    },
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+  );
+}
+
+function toggleTracking() {
+  const btn = document.getElementById('track-btn');
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+    btn.textContent = '📡 Start Live Tracking';
+    btn.classList.remove('tracking');
+    return;
+  }
+  if (!navigator.geolocation) { Toast.error('Not supported', 'Geolocation is not available in this browser.'); return; }
+  btn.textContent = '📡 Stop Live Tracking';
+  btn.classList.add('tracking');
+  watchId = navigator.geolocation.watchPosition(
+    pos => setLiveMarker(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy),
+    err => {
+      Toast.error('Tracking error', err.message || 'Live tracking stopped unexpectedly.');
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+      btn.textContent = '📡 Start Live Tracking';
+      btn.classList.remove('tracking');
+    },
+    { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+  );
+}
+
+async function loadLocationPins() {
+  try {
+    const data = await API.envHistory(20);
+    const items = (data.history || []).filter(h => h.lat != null && h.lon != null);
+    pinMarkers.forEach(m => map.removeLayer(m));
+    pinMarkers.length = 0;
+    const iconFor = t => t === 'home' ? '🏠' : t === 'office' ? '🏢' : t === 'commute' ? '🚌' : '📌';
+    items.forEach(h => {
+      const marker = L.marker([h.lat, h.lon], {
+        icon: L.divIcon({ className: '', html: `<div style="font-size:1.3rem">${iconFor(h.location_type)}</div>`, iconSize: [24, 24], iconAnchor: [12, 20] }),
+      }).addTo(map).bindPopup(
+        `<strong>${h.location_name || 'Logged location'}</strong><br/>${h.location_type || ''}` +
+        (h.weather_condition ? `<br/>${h.weather_condition}${h.temperature != null ? ', ' + h.temperature + '°C' : ''}` : '') +
+        (h.logged_at ? `<br/><span style="color:#888">${new Date(h.logged_at).toLocaleString()}</span>` : '')
+      );
+      pinMarkers.push(marker);
+    });
+  } catch (e) { /* map still works without historical pins */ }
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
+initMap();
+loadLocationPins();
 loadWeather({ city: 'Mumbai' });
 loadForecast({ city: 'Mumbai' });
 loadEnvImpact();
