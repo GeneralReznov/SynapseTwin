@@ -154,24 +154,9 @@ async def log_location(body: LocationBody, current_user: dict = Depends(require_
     user_id  = current_user["userId"]
     now      = datetime.now(timezone.utc).isoformat()
 
-    try:
-        await run_query(
-            """MERGE (u:User {id:$userId})
-               CREATE (l:Location {
-                   lat: $lat, lon: $lon, name: $name,
-                   locationType: $type, timestamp: $ts
-               })
-               CREATE (u)-[:LOCATED_AT]->(l)""",
-            {
-                "userId": user_id, "lat": body.latitude, "lon": body.longitude,
-                "name":   body.location_name or "Unknown",
-                "type":   body.location_type, "ts": now,
-            },
-        )
-    except Exception as e:
-        logger.warning(f"Location Neo4j log failed: {e}")
-
-    # Fetch weather for this location if API key available
+    # Fetch weather for this location if API key available (fetched before the
+    # Neo4j write so we can persist a full snapshot on the Location node —
+    # this is what powers both the location history list and the map pins).
     weather_data = {}
     if OPENWEATHER_API_KEY:
         try:
@@ -182,6 +167,29 @@ async def log_location(body: LocationBody, current_user: dict = Depends(require_
                 weather_data = _parse_weather(resp.json())
         except Exception:
             pass
+
+    try:
+        await run_query(
+            """MERGE (u:User {id:$userId})
+               CREATE (l:Location {
+                   lat: $lat, lon: $lon, name: $name,
+                   locationType: $type, timestamp: $ts,
+                   weatherCondition: $weatherCondition,
+                   temperature: $temperature,
+                   productivityScore: $productivityScore
+               })
+               CREATE (u)-[:LOCATED_AT]->(l)""",
+            {
+                "userId": user_id, "lat": body.latitude, "lon": body.longitude,
+                "name":   body.location_name or "Unknown",
+                "type":   body.location_type, "ts": now,
+                "weatherCondition": weather_data.get("description", ""),
+                "temperature":      weather_data.get("temp"),
+                "productivityScore": weather_data.get("productivityScore"),
+            },
+        )
+    except Exception as e:
+        logger.warning(f"Location Neo4j log failed: {e}")
 
     # AI insight on location productivity
     insight = await _analyze_location_productivity(
@@ -207,14 +215,18 @@ async def get_environment_history(
     limit: int = 7,
     current_user: dict = Depends(require_auth),
 ):
-    """Get recent weather and location logs for the user."""
+    """Get recent logged locations (with coordinates + weather snapshot) for the user —
+    powers both the location history list and the live map's historical pins."""
     try:
         rows = await run_query(
-            """MATCH (u:User {id:$userId})-[:WEATHER_LOG]->(w:WeatherLog)
-               RETURN w.city AS city, w.temp AS temp, w.description AS description,
-                      w.humidity AS humidity, w.feelsLike AS feelsLike,
-                      w.productivityScore AS productivityScore, w.timestamp AS timestamp
-               ORDER BY w.timestamp DESC LIMIT $limit""",
+            """MATCH (u:User {id:$userId})-[:LOCATED_AT]->(l:Location)
+               RETURN l.name AS location_name, l.locationType AS location_type,
+                      l.lat AS lat, l.lon AS lon,
+                      l.weatherCondition AS weather_condition,
+                      l.temperature AS temperature,
+                      l.productivityScore AS productivity_score,
+                      l.timestamp AS logged_at
+               ORDER BY l.timestamp DESC LIMIT $limit""",
             {"userId": current_user["userId"], "limit": limit},
         )
         return {"success": True, "history": rows}
