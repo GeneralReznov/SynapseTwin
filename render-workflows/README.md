@@ -7,9 +7,8 @@ service** on Render, alongside your existing SynapseTwin API.
 
 ## What this actually is
 
-This service defines **SynapseTwin's AI Digital Twin pipeline as a real,
-multi-stage Render Workflow** — the same reasoning pipeline the main app runs
-inline on each request, but here it runs as a genuine chain of connected,
+This service defines **SynapseTwin's AI Digital Twin pipeline as a multi-stage Render Workflow** — the same reasoning pipeline the main app runs
+inline on each request, but here it runs as a chain of connected,
 independently-retryable tasks on Render's infrastructure:
 
 ```
